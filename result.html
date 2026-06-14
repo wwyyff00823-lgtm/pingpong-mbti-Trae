@@ -938,12 +938,16 @@
         });
 
         document.getElementById('unlockBtn').addEventListener('click', async () => {
-            document.getElementById('paymentModal').classList.add('show');
-            document.getElementById('qrCodeContainer').style.display = 'none';
-            document.getElementById('paymentMethods').style.display = 'flex';
-            document.getElementById('paymentBtn').style.display = 'block';
-            document.getElementById('paymentLoading').classList.remove('show');
-            document.getElementById('paymentSuccess').style.display = 'none';
+            try {
+                document.getElementById('paymentModal').classList.add('show');
+                document.getElementById('qrCodeContainer').style.display = 'none';
+                document.getElementById('paymentMethods').style.display = 'flex';
+                document.getElementById('paymentBtn').style.display = 'block';
+                document.getElementById('paymentLoading').classList.remove('show');
+            } catch (error) {
+                console.error('解锁按钮点击错误:', error);
+                showToast('操作失败，请重试');
+            }
         });
 
         document.getElementById('paymentBtn').addEventListener('click', async () => {
