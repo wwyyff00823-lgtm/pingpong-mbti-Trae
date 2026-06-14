@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>业余乒乓球人的MBTI风格测试</title>
+    <script src="/script.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+            background: linear-gradient(135deg, #fdf6e3 0%, #fff8f0 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 420px;
+            background: #fff;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+        }
+
+        .title-section {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .main-title {
+            font-size: 24px;
+            font-weight: bold;
+            color: #c41e3a;
+            margin-bottom: 15px;
+            line-height: 1.4;
+        }
+
+        .subtitle {
+            font-size: 16px;
+            color: #666;
+            line-height: 1.6;
+        }
+
+        .level-section {
+            margin-bottom: 30px;
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .level-options {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .level-card {
+            display: flex;
+            align-items: center;
+            padding: 18px 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: #fff;
+        }
+
+        .level-card:hover {
+            border-color: #ff6b35;
+            background: #fff5f0;
+        }
+
+        .level-card.selected {
+            border-color: #c41e3a;
+            background: #fff0f0;
+        }
+
+        .radio-circle {
+            width: 24px;
+            height: 24px;
+            border: 2px solid #ccc;
+            border-radius: 50%;
+            margin-right: 15px;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .level-card.selected .radio-circle {
+            border-color: #c41e3a;
+            background: #c41e3a;
+            box-shadow: 0 0 10px rgba(196, 30, 58, 0.3);
+        }
+
+        .radio-circle::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 10px;
+            height: 10px;
+            background: #fff;
+            border-radius: 50%;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .level-card.selected .radio-circle::after {
+            opacity: 1;
+        }
+
+        .level-info {
+            flex: 1;
+        }
+
+        .level-name {
+            font-size: 17px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 3px;
+        }
+
+        .level-desc {
+            font-size: 13px;
+            color: #888;
+        }
+
+        .start-btn {
+            width: 100%;
+            height: 56px;
+            background: linear-gradient(135deg, #c41e3a 0%, #ff6b35 100%);
+            color: #fff;
+            border: none;
+            border-radius: 12px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(196, 30, 58, 0.4);
+            margin-bottom: 30px;
+        }
+
+        .start-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(196, 30, 58, 0.5);
+        }
+
+        .start-btn:active:not(:disabled) {
+            transform: translateY(0);
+            box-shadow: 0 2px 10px rgba(196, 30, 58, 0.3);
+        }
+
+        .start-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        .footer {
+            text-align: center;
+            font-size: 12px;
+            color: #999;
+            line-height: 1.6;
+        }
+
+        .toast {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: #fff;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 15px;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+
+        .toast.show {
+            opacity: 1;
+            visibility: visible;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="title-section">
+            <h1 class="main-title">业余乒乓球人的MBTI风格测试</h1>
+            <p class="subtitle">5分钟，30道选择题，判断你的打球性格，给你专属涨球妙计</p>
+        </div>
+
+        <div class="level-section">
+            <h2 class="section-title">请选择你的水平档位</h2>
+            <div class="level-options">
+                <div class="level-card" data-level="low">
+                    <div class="radio-circle"></div>
+                    <div class="level-info">
+                        <div class="level-name">1200-1499</div>
+                        <div class="level-desc">入门进阶</div>
+                    </div>
+                </div>
+                <div class="level-card" data-level="mid">
+                    <div class="radio-circle"></div>
+                    <div class="level-info">
+                        <div class="level-name">1500-1799</div>
+                        <div class="level-desc">中坚力量</div>
+                    </div>
+                </div>
+                <div class="level-card" data-level="high">
+                    <div class="radio-circle"></div>
+                    <div class="level-info">
+                        <div class="level-name">1800-2099</div>
+                        <div class="level-desc">准高手</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <button class="start-btn" id="startBtn" disabled>开始测试</button>
+
+        <div class="footer">
+            <p>©️2026 业余乒乓球人的MBTI风格测试</p>
+            <p>版权所有，测试结果仅供参考</p>
+        </div>
+    </div>
+
+    <div class="toast" id="toast">哈喽，先选个水平再开始呗~</div>
+
+    <script>
+        const levelCards = document.querySelectorAll('.level-card');
+        const startBtn = document.getElementById('startBtn');
+        const toast = document.getElementById('toast');
+        let selectedLevel = null;
+
+        levelCards.forEach(card => {
+            card.addEventListener('click', () => {
+                levelCards.forEach(c => c.classList.remove('selected'));
+                card.classList.add('selected');
+                selectedLevel = card.dataset.level;
+                startBtn.disabled = false;
+            });
+        });
+
+        startBtn.addEventListener('click', () => {
+            if (!selectedLevel) {
+                showToast('哈喽，先选个水平再开始呗~');
+                return;
+            }
+            
+            localStorage.setItem('userLevel', selectedLevel);
+            localStorage.removeItem('answers');
+            localStorage.removeItem('integrityScore');
+            localStorage.removeItem('mbtiType');
+            
+            window.location.href = '/quiz.html';
+        });
+
+        function showToast(message) {
+            toast.textContent = message;
+            toast.classList.add('show');
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 2000);
+        }
+    </script>
+</body>
+</html>

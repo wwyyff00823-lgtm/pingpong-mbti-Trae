@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>乒乓球MBTI测试</title>
+    <script src="/script.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+            background: linear-gradient(135deg, #fdf6e3 0%, #fff8f0 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 20px;
+            padding-top: 40px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 420px;
+            background: #fff;
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+        }
+
+        .progress-section {
+            margin-bottom: 25px;
+        }
+
+        .progress-bar {
+            height: 8px;
+            background: #f0f0f0;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 8px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #c41e3a 0%, #ff6b35 100%);
+            border-radius: 4px;
+            transition: width 0.3s ease;
+            box-shadow: 0 0 10px rgba(196, 30, 58, 0.3);
+        }
+
+        .progress-text {
+            font-size: 14px;
+            color: #666;
+            text-align: center;
+        }
+
+        .question-section {
+            margin-bottom: 25px;
+        }
+
+        .question-number {
+            font-size: 14px;
+            color: #ff6b35;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .question-text {
+            font-size: 21px;
+            font-weight: bold;
+            color: #333;
+            line-height: 1.5;
+            margin-bottom: 20px;
+        }
+
+        .options-section {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 25px;
+        }
+
+        .option-card {
+            display: flex;
+            align-items: flex-start;
+            padding: 18px 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: #fff;
+        }
+
+        .option-card:hover {
+            border-color: #ff6b35;
+            background: #fff5f0;
+        }
+
+        .option-card.selected {
+            border-color: #c41e3a;
+            background: #fff0f0;
+            box-shadow: 0 0 15px rgba(196, 30, 58, 0.15);
+        }
+
+        .option-letter {
+            width: 28px;
+            height: 28px;
+            border: 2px solid #ccc;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 14px;
+            font-weight: bold;
+            color: #666;
+            margin-right: 15px;
+            flex-shrink: 0;
+            transition: all 0.3s ease;
+        }
+
+        .option-card.selected .option-letter {
+            border-color: #c41e3a;
+            background: #c41e3a;
+            color: #fff;
+        }
+
+        .option-text {
+            font-size: 17px;
+            color: #333;
+            line-height: 1.5;
+            padding-top: 3px;
+        }
+
+        .next-btn {
+            width: 100%;
+            height: 52px;
+            background: linear-gradient(135deg, #c41e3a 0%, #ff6b35 100%);
+            color: #fff;
+            border: none;
+            border-radius: 12px;
+            font-size: 17px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(196, 30, 58, 0.4);
+        }
+
+        .next-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(196, 30, 58, 0.5);
+        }
+
+        .next-btn:active:not(:disabled) {
+            transform: translateY(0);
+            box-shadow: 0 2px 10px rgba(196, 30, 58, 0.3);
+        }
+
+        .next-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        .footer {
+            text-align: center;
+            font-size: 12px;
+            color: #999;
+            margin-top: 20px;
+        }
+
+        .toast {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: #fff;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 15px;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+
+        .toast.show {
+            opacity: 1;
+            visibility: visible;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="progress-section">
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <div class="progress-text" id="progressText">第 1/30 题</div>
+        </div>
+
+        <div class="question-section">
+            <div class="question-number" id="questionNumber">Q1</div>
+            <div class="question-text" id="questionText"></div>
+        </div>
+
+        <div class="options-section" id="optionsSection"></div>
+
+        <button class="next-btn" id="nextBtn" disabled>
+            <span id="btnText">下一题</span>
+        </button>
+
+        <div class="footer">
+            <p>©️2026 业余乒乓球人的MBTI风格测试</p>
+        </div>
+    </div>
+
+    <div class="toast" id="toast">请选择一个选项</div>
+
+    <script>
+        const questions = [
+            {
+                id: 1,
+                text: '【热身】刚热身，对手看起来一般，你第一球是打算？',
+                options: [
+                    { text: '直接发个奔球偷袭，先吓他一跳再说', score: { E: 1 }, tag: '激进' },
+                    { text: '发个极短不转，看看他搓球冒高不', score: { I: 1 }, tag: '保守' },
+                    { text: '摆短劈长结合，先试探两板摸摸底', score: { S: 1 }, tag: '稳健' },
+                    { text: '随便发一个，只要球能过网就行', score: { P: 1 }, tag: '随性' }
+                ]
+            },
+            {
+                id: 2,
+                text: '【发力】打球时你最依赖身体的哪一部分发力？',
+                options: [
+                    { text: '腰腿，主打一个发力通透', score: { N: 1 }, tag: '整体协调' },
+                    { text: '大臂前臂，动作框架必须标准', score: { S: 1 }, tag: '注重规范' },
+                    { text: '手腕手指，全靠指尖那点微调', score: { T: 1 }, tag: '技术流' },
+                    { text: '全身放松，靠惯性把球"碰"过去', score: { F: 1 }, tag: '手感流' }
+                ]
+            },
+            {
+                id: 3,
+                text: '【发球】你最得意的发球套路是？',
+                options: [
+                    { text: '逆向旋转，怎么怪怎么来', score: { N: 1 }, tag: '变化多端' },
+                    { text: '极短不转，贴网而过', score: { S: 1 }, tag: '精准控制' },
+                    { text: '急长底线，又快又沉', score: { T: 1 }, tag: '逻辑压制' },
+                    { text: '高抛晃动，先把你晃开重心', score: { F: 1 }, tag: '心理博弈' }
+                ]
+            },
+            {
+                id: 4,
+                text: '【接冲】面对对手爆冲过来的侧上旋，你本能反应是？',
+                options: [
+                    { text: '迎前快带，甚至反撕回去', score: { E: 1 }, tag: '积极对抗' },
+                    { text: '减力挡短，卸掉旋转吸在台内', score: { S: 1 }, tag: '稳健防守' },
+                    { text: '侧身让位，用反面反拉对冲', score: { T: 1 }, tag: '技术对抗' },
+                    { text: '顺势一撇，接到他够不着的地方', score: { P: 1 }, tag: '随缘应对' }
+                ]
+            },
+            {
+                id: 5,
+                text: '【关键分心态】9:9关键分，你发球前心里默念的是？',
+                options: [
+                    { text: '干他！这分必须拿下！', score: { E: 1 }, tag: '激进', check: 'aggressive' },
+                    { text: '稳住，别无谓失误就行', score: { I: 1 }, tag: '保守', check: 'conservative' },
+                    { text: '发他正手小三角，这位置他怕', score: { T: 1 }, tag: '' },
+                    { text: '随便发一个，看他接啥再说', score: { P: 1 }, tag: '' }
+                ]
+            },
+            {
+                id: 6,
+                text: '【对拉】中远台对拉，你更倾向于？',
+                options: [
+                    { text: '发力爆冲，一板比一板重', score: { E: 1 }, tag: '暴力输出' },
+                    { text: '连续变线，左右调动对手跑动', score: { S: 1 }, tag: '战术调动' },
+                    { text: '压住反手，死磕他薄弱点', score: { T: 1 }, tag: '逻辑打击' },
+                    { text: '加转弧圈，逼他失误或冒高', score: { F: 1 }, tag: '旋转控制' }
+                ]
+            },
+            {
+                id: 7,
+                text: '【复盘】输了一场不该输的球，你出门第一句话是？',
+                options: [
+                    { text: '下次见他往死里打，找回场子', score: { E: 1 }, tag: '好胜心' },
+                    { text: '复盘录像，看看哪个环节漏了', score: { I: 1 }, tag: '内省' },
+                    { text: '肯定是拍子没灌油/胶皮不行', score: { T: 1 }, tag: '器材党' },
+                    { text: '今天状态不好/球台太滑/光线暗', score: { F: 1 }, tag: '环境论' }
+                ]
+            },
+            {
+                id: 8,
+                text: '【社交】球馆来了个高手，你会上前搭讪约战吗？',
+                options: [
+                    { text: '必须的，求虐才能进步', score: { E: 1 }, tag: '外向主动' },
+                    { text: '先暗中观察，看准了再下手', score: { I: 1 }, tag: '内向谨慎' },
+                    { text: '没必要，打球是为了出汗不是社交', score: { T: 1 }, tag: '理性独立' },
+                    { text: '微笑点头，他主动聊再接话', score: { F: 1 }, tag: '和谐友善' }
+                ]
+            },
+            {
+                id: 9,
+                text: '【器材观】选球拍你最看重啥？',
+                options: [
+                    { text: '杀伤力，一板过的爽感', score: { E: 1 }, tag: '暴力美学' },
+                    { text: '掌控感，指哪打哪的稳定', score: { S: 1 }, tag: '稳健至上' },
+                    { text: '数据参数，硬度厚度容错率', score: { T: 1 }, tag: '参数党' },
+                    { text: '手感反馈，吃球感和持球时间', score: { F: 1 }, tag: '触感至上' }
+                ]
+            },
+            {
+                id: 10,
+                text: '【怪胶】遇到长胶/生胶/防弧这些怪胶大爷，你通常？',
+                options: [
+                    { text: '不管啥胶，上来就是一顿爆冲', score: { E: 1 }, tag: '硬刚派' },
+                    { text: '耐心搓摆，寻找机会一板过', score: { S: 1 }, tag: '耐心派' },
+                    { text: '盯着他的胶皮看，分析颗粒走向', score: { T: 1 }, tag: '分析派' },
+                    { text: '能打下几个算几个，打不下就喂球', score: { P: 1 }, tag: '随缘派' }
+                ]
+            },
+            {
+                id: 11,
+                text: '【多球】练多球，教练发定点正手位，你更倾向？',
+                options: [
+                    { text: '一板过，主打力量穿透，听见"啪"声才爽', score: { S: 1 }, tag: '基础派' },
+                    { text: '放慢节奏，琢磨摩擦感觉，追求落点刁钻', score: { N: 1 }, tag: '变化派' },
+                    { text: '数着数，必须连续20板不掉', score: { J: 1 }, tag: '计划派' },
+                    { text: '随便拉，感觉来了连拉十板，没感觉就歇会', score: { P: 1 }, tag: '随性派' }
+                ]
+            },
+            {
+                id: 12,
+                text: '【拧拉】你的反手拧拉（或撇）在球友心中地位是？',
+                options: [
+                    { text: '常规武器，出台必拧，先上手', score: { J: 1 }, tag: '计划派' },
+                    { text: '备用大招，偶尔偷袭或关键分用', score: { P: 1 }, tag: '随性派' },
+                    { text: '耍帅专用，拧得好不好看不重要', score: { E: 1 }, tag: '表演派' },
+                    { text: '能拧就拧，拧不好就过渡一板', score: { S: 1 }, tag: '实用派' }
+                ]
+            },
+            {
+                id: 13,
+                text: '【观察】发球前，你会刻意停顿看对手站位吗？',
+                options: [
+                    { text: '必须看，抓他站位死角发', score: { T: 1 }, tag: '严谨派' },
+                    { text: '偶尔看，主要凭感觉发', score: { S: 1 }, tag: '经验派' },
+                    { text: '从不看，发完再调整', score: { P: 1 }, tag: '随性派' },
+                    { text: '看心情，状态好就多看两眼', score: { F: 1 }, tag: '感觉派' }
+                ]
+            },
+            {
+                id: 14,
+                text: '【摆短】对手接发球老是摆短，你怎么办？',
+                options: [
+                    { text: '直接捅长球，打破他的节奏', score: { E: 1 }, tag: '主动派' },
+                    { text: '耐心搓长，逼他先上手', score: { S: 1 }, tag: '稳健派' },
+                    { text: '挑打或拧拉，直接抢攻', score: { T: 1 }, tag: '抢攻派' },
+                    { text: '跟着摆短，比谁更稳', score: { F: 1 }, tag: '防守派' }
+                ]
+            },
+            {
+                id: 15,
+                text: '【步法】比赛中你脚下移动风格是？',
+                options: [
+                    { text: '蹦蹦跳跳，重心起伏大，随时爆发', score: { E: 1 }, tag: '动态派' },
+                    { text: '碎步调整，时刻保持重心平稳', score: { S: 1 }, tag: '稳态派' },
+                    { text: '卡位精准，预判强，很少大范围跑', score: { T: 1 }, tag: '预判派' },
+                    { text: '随缘跑位，只要能蹭到球就行', score: { P: 1 }, tag: '随缘派' }
+                ]
+            },
+            {
+                id: 16,
+                text: '【削球】遇到削球手，你的策略是？',
+                options: [
+                    { text: '连续拉冲，哪怕失误也要破节奏', score: { E: 1 }, tag: '强攻派' },
+                    { text: '耐心搓吊，寻找机会一板过', score: { S: 1 }, tag: '耐心派' },
+                    { text: '突击中路追身，让他无法发力', score: { T: 1 }, tag: '突击派' },
+                    { text: '放高球逗他玩，消耗耐心', score: { F: 1 }, tag: '娱乐派' }
+                ]
+            },
+            {
+                id: 17,
+                text: '【自我评价】你觉得自己的步法是？',
+                options: [
+                    { text: '虽丑但能用，总能蹭到球', score: { S: 1 }, tag: '实用派' },
+                    { text: '灵感型，偶尔能跑出神级扑救', score: { N: 1 }, tag: '灵感派' },
+                    { text: '教科书级，卡位精准', score: { T: 1 }, tag: '学院派' },
+                    { text: '基本靠手，脚懒得动', score: { P: 1 }, tag: '懒惰派' }
+                ]
+            },
+            {
+                id: 18,
+                text: '【落后】比分落后时，你最先想到调整什么？',
+                options: [
+                    { text: '战术，比如多发短球/压反手', score: { J: 1 }, tag: '计划派' },
+                    { text: '节奏，忽快忽慢打乱呼吸', score: { P: 1 }, tag: '变化派' },
+                    { text: '心态，告诉自己稳住别慌', score: { S: 1 }, tag: '心态派' },
+                    { text: '器材，是不是拍子没灌油', score: { T: 1 }, tag: '器材派' }
+                ]
+            },
+            {
+                id: 19,
+                text: '【进步】打球时你更相信哪种进步方式？',
+                options: [
+                    { text: '把一种发球练到无敌', score: { S: 1 }, tag: '专精派' },
+                    { text: '换几种假动作组合，看对手慌', score: { N: 1 }, tag: '多变派' },
+                    { text: '死磕多球，把动作练成肌肉记忆', score: { J: 1 }, tag: '苦练派' },
+                    { text: '随心所欲，怎么舒服怎么打', score: { P: 1 }, tag: '随心派' }
+                ]
+            },
+            {
+                id: 20,
+                text: '【座右铭】如果让你选一个词当乒坛座右铭，你选？',
+                options: [
+                    { text: '稳定！稳定压倒一切！', score: { J: 1 }, tag: '秩序派' },
+                    { text: '变化！唯一不变的是变化！', score: { P: 1 }, tag: '自由派' },
+                    { text: '暴力！不服就干！', score: { E: 1 }, tag: '暴力派' },
+                    { text: '智慧！用脑子打球！', score: { T: 1 }, tag: '智慧派' }
+                ]
+            },
+            {
+                id: 21,
+                text: '【指标】练球时，你更看重哪项指标进步？',
+                options: [
+                    { text: '上台率，十个球接回八个', score: { S: 1 }, tag: '稳健指标' },
+                    { text: '威胁度，哪怕失误俩也要俩得分', score: { N: 1 }, tag: '威胁指标' },
+                    { text: '动作规范性，教练夸我像马龙', score: { T: 1 }, tag: '规范指标' },
+                    { text: '手感舒适度，打着不别扭就行', score: { F: 1 }, tag: '舒适指标' }
+                ]
+            },
+            {
+                id: 22,
+                text: '【爆冲】对手正手弧圈很爆，你一般怎么应对？',
+                options: [
+                    { text: '硬碰硬，退台对拉比底劲', score: { T: 1 }, tag: '硬刚派' },
+                    { text: '坚决不给正手，锁死反手', score: { F: 1 }, tag: '规避派' },
+                    { text: '搓长逼反手，让他侧身失误', score: { S: 1 }, tag: '战术派' },
+                    { text: '放高球转攻，磨死他', score: { P: 1 }, tag: '磨工派' }
+                ]
+            },
+            {
+                id: 23,
+                text: '【输球】打完一场球输了，你走出球馆第一句话通常是？',
+                options: [
+                    { text: '今天没睡醒/球台滑/拍子没灌油', score: { F: 1 }, tag: '外因派' },
+                    { text: '正手位还是漏，回去得练步伐', score: { T: 1 }, tag: '内因派' },
+                    { text: '下次见他必须赢回来', score: { E: 1 }, tag: '斗志派' },
+                    { text: '算了，就是玩，输赢不重要', score: { P: 1 }, tag: '佛系派' }
+                ]
+            },
+            {
+                id: 24,
+                text: '【备战】比赛前一天晚上，你通常会？',
+                options: [
+                    { text: '早点睡，养精蓄锐梦里挥拍', score: { J: 1 }, tag: '严谨派' },
+                    { text: '刷短视频看比赛集锦，兴奋睡不着', score: { P: 1 }, tag: '随性派' },
+                    { text: '检查装备，灌油贴胶皮', score: { T: 1 }, tag: '器材派' },
+                    { text: '正常作息，打球而已别太累', score: { F: 1 }, tag: '养生派' }
+                ]
+            },
+            {
+                id: 25,
+                text: '【嘴硬】同样是8:10落后，球友问你咋办，你嘴上说？',
+                options: [
+                    { text: '没事，两分球追回来！', score: { E: 1 }, tag: '激进', check: 'aggressive' },
+                    { text: '这局看命了，下一局再赢', score: { I: 1 }, tag: '保守', check: 'conservative' },
+                    { text: '他发球也就那样，我能接好', score: { T: 1 }, tag: '' },
+                    { text: '我也就是陪练，随便打打', score: { F: 1 }, tag: '' }
+                ]
+            },
+            {
+                id: 26,
+                text: '【信赖】接发球时，你更信赖身体的哪个部位？',
+                options: [
+                    { text: '手臂手腕，靠手感把球"捏"过去', score: { S: 1 }, tag: '手感派' },
+                    { text: '腰腿，靠重心交换把球"撞"出去', score: { N: 1 }, tag: '发力派' },
+                    { text: '手指指尖，微调弧线和落点', score: { T: 1 }, tag: '微调派' },
+                    { text: '全身放松，靠惯性碰过去', score: { F: 1 }, tag: '随缘派' }
+                ]
+            },
+            {
+                id: 27,
+                text: '【相持】中台相持，你更喜欢？',
+                options: [
+                    { text: '主动变线，找角度得分', score: { E: 1 }, tag: '主动派' },
+                    { text: '稳扎稳打，等对手失误', score: { S: 1 }, tag: '稳健派' },
+                    { text: '计算线路，预判对手回球', score: { T: 1 }, tag: '计算派' },
+                    { text: '随意应对，打哪算哪', score: { P: 1 }, tag: '随性派' }
+                ]
+            },
+            {
+                id: 28,
+                text: '【抢攻】机会球出现，你会？',
+                options: [
+                    { text: '毫不犹豫，一板打死', score: { E: 1 }, tag: '果断派' },
+                    { text: '稳一稳，确保上台', score: { S: 1 }, tag: '稳妥派' },
+                    { text: '观察对手站位再决定', score: { T: 1 }, tag: '观察派' },
+                    { text: '看心情，想发力就发力', score: { F: 1 }, tag: '随心派' }
+                ]
+            },
+            {
+                id: 29,
+                text: '【心态】领先时被追分，你会？',
+                options: [
+                    { text: '加快节奏，一鼓作气拿下', score: { E: 1 }, tag: '激进派' },
+                    { text: '放慢节奏，稳扎稳打', score: { I: 1 }, tag: '保守派' },
+                    { text: '分析对手弱点，针对性攻击', score: { T: 1 }, tag: '分析派' },
+                    { text: '无所谓，输了就输了', score: { P: 1 }, tag: '佛系派' }
+                ]
+            },
+            {
+                id: 30,
+                text: '【训练】你更喜欢哪种训练方式？',
+                options: [
+                    { text: '高强度对抗，实战为主', score: { E: 1 }, tag: '实战派' },
+                    { text: '基本功打磨，循序渐进', score: { S: 1 }, tag: '基础派' },
+                    { text: '技术研究，视频分析', score: { T: 1 }, tag: '研究派' },
+                    { text: '快乐乒乓，轻松自在', score: { F: 1 }, tag: '快乐派' }
+                ]
+            }
+        ];
+
+        const currentQuestionIndex = 0;
+        const shuffledQuestions = [];
+        const userAnswers = [];
+        let currentIndex = 0;
+        let selectedOption = null;
+
+        const progressFill = document.getElementById('progressFill');
+        const progressText = document.getElementById('progressText');
+        const questionNumber = document.getElementById('questionNumber');
+        const questionText = document.getElementById('questionText');
+        const optionsSection = document.getElementById('optionsSection');
+        const nextBtn = document.getElementById('nextBtn');
+        const btnText = document.getElementById('btnText');
+        const toast = document.getElementById('toast');
+
+        function shuffleArray(array) {
+            const result = [...array];
+            for (let i = result.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [result[i], result[j]] = [result[j], result[i]];
+            }
+            return result;
+        }
+
+        function initQuiz() {
+            shuffledQuestions.push(...shuffleArray(questions));
+            shuffledQuestions.forEach(q => {
+                q.options = shuffleArray(q.options);
+            });
+            loadQuestion();
+        }
+
+        function loadQuestion() {
+            const question = shuffledQuestions[currentIndex];
+            questionNumber.textContent = `Q${question.id}`;
+            questionText.textContent = question.text;
+            
+            optionsSection.innerHTML = '';
+            selectedOption = null;
+            nextBtn.disabled = true;
+
+            const letters = ['A', 'B', 'C', 'D'];
+            question.options.forEach((option, index) => {
+                const optionCard = document.createElement('div');
+                optionCard.className = 'option-card';
+                optionCard.dataset.optionIndex = index;
+                
+                optionCard.innerHTML = `
+                    <div class="option-letter">${letters[index]}</div>
+                    <div class="option-text">${option.text}</div>
+                `;
+                
+                optionCard.addEventListener('click', () => {
+                    document.querySelectorAll('.option-card').forEach(card => {
+                        card.classList.remove('selected');
+                    });
+                    optionCard.classList.add('selected');
+                    selectedOption = index;
+                    nextBtn.disabled = false;
+                });
+                
+                optionsSection.appendChild(optionCard);
+            });
+
+            updateProgress();
+        }
+
+        function updateProgress() {
+            const progress = ((currentIndex + 1) / shuffledQuestions.length) * 100;
+            progressFill.style.width = `${progress}%`;
+            progressText.textContent = `第 ${currentIndex + 1}/${shuffledQuestions.length} 题`;
+        }
+
+        function calculateMBTI() {
+            const scores = { E: 0, I: 0, S: 0, N: 0, T: 0, F: 0, J: 0, P: 0 };
+            
+            userAnswers.forEach((answer, idx) => {
+                const question = shuffledQuestions[idx];
+                const selectedOption = question.options[answer];
+                if (selectedOption && selectedOption.score) {
+                    Object.entries(selectedOption.score).forEach(([key, value]) => {
+                        scores[key] += value;
+                    });
+                }
+            });
+
+            let mbti = '';
+            mbti += scores.E >= scores.I ? 'E' : 'I';
+            mbti += scores.S >= scores.N ? 'S' : 'N';
+            mbti += scores.T >= scores.F ? 'T' : 'F';
+            mbti += scores.J >= scores.P ? 'J' : 'P';
+
+            return mbti;
+        }
+
+        function checkIntegrity() {
+            let contradictionCount = 0;
+            
+            const q5Index = shuffledQuestions.findIndex(q => q.id === 5);
+            const q25Index = shuffledQuestions.findIndex(q => q.id === 25);
+            
+            if (q5Index !== -1 && q25Index !== -1) {
+                const q5Answer = shuffledQuestions[q5Index].options[userAnswers[q5Index]];
+                const q25Answer = shuffledQuestions[q25Index].options[userAnswers[q25Index]];
+                
+                if (q5Answer.check === 'aggressive' && q25Answer.check === 'conservative') {
+                    contradictionCount++;
+                }
+            }
+
+            return contradictionCount < 3;
+        }
+
+        nextBtn.addEventListener('click', () => {
+            if (selectedOption === null) {
+                showToast('请选择一个选项');
+                return;
+            }
+
+            const question = shuffledQuestions[currentIndex];
+            userAnswers.push(selectedOption);
+
+            if (currentIndex < shuffledQuestions.length - 1) {
+                currentIndex++;
+                loadQuestion();
+            } else {
+                const mbtiType = calculateMBTI();
+                const integrityScore = checkIntegrity();
+                
+                localStorage.setItem('answers', JSON.stringify(userAnswers));
+                localStorage.setItem('mbtiType', mbtiType);
+                localStorage.setItem('integrityScore', integrityScore.toString());
+                
+                window.location.href = '/result.html';
+            }
+
+            if (currentIndex === shuffledQuestions.length - 1) {
+                btnText.textContent = '查看结果';
+            }
+        });
+
+        function showToast(message) {
+            toast.textContent = message;
+            toast.classList.add('show');
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 2000);
+        }
+
+        initQuiz();
+    </script>
+</body>
+</html>

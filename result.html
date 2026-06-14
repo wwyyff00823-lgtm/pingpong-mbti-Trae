@@ -1,0 +1,1008 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>测试结果 - 乒乓球MBTI</title>
+    <script src="/script.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+            background: linear-gradient(135deg, #fdf6e3 0%, #fff8f0 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            padding: 20px;
+            padding-top: 40px;
+        }
+        .container {
+            width: 100%;
+            max-width: 420px;
+            background: #fff;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        }
+        .result-header { text-align: center; margin-bottom: 30px; }
+        .mbti-type {
+            font-size: 48px; font-weight: bold; color: #c41e3a;
+            text-shadow: 2px 2px 4px rgba(196,30,58,0.2);
+            margin-bottom: 15px; letter-spacing: 8px;
+        }
+        .personality-name { font-size: 22px; font-weight: bold; color: #333; margin-bottom: 20px; }
+        .warning-box {
+            background: #fff8dc; border: 2px solid #daa520;
+            border-radius: 12px; padding: 15px; margin-bottom: 20px; text-align: center;
+        }
+        .warning-text { font-size: 14px; color: #8b4513; line-height: 1.5; }
+        .personality-image {
+            width: 200px; height: 200px; margin: 0 auto 25px;
+            border-radius: 50%; background: linear-gradient(135deg, #fff0f0, #ffe0e0);
+            display: flex; justify-content: center; align-items: center;
+            box-shadow: 0 8px 30px rgba(196,30,58,0.2);
+            position: relative;
+            overflow: hidden;
+        }
+        .personality-image::before {
+            content: '';
+            position: absolute;
+            top: -50%; left: -50%;
+            width: 200%; height: 200%;
+            background: linear-gradient(45deg, transparent 40%, rgba(255,255,255,0.3) 50%, transparent 60%);
+            animation: shine 3s ease-in-out infinite;
+        }
+        @keyframes shine {
+            0%, 100% { transform: translateX(-100%) rotate(45deg); }
+            50% { transform: translateX(100%) rotate(45deg); }
+        }
+        .image-content { 
+            font-size: 90px; 
+            position: relative; 
+            z-index: 1;
+            animation: bounce 2s ease-in-out infinite;
+        }
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+        .image-label {
+            position: absolute; bottom: -30px; left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(135deg, #c41e3a, #ff6b35);
+            color: #fff; padding: 6px 16px; border-radius: 20px;
+            font-size: 12px; font-weight: bold;
+            white-space: nowrap;
+        }
+        .traits-section { margin-bottom: 30px; }
+        .trait-item {
+            display: flex; padding: 15px 20px;
+            background: #f8f9fa; border-radius: 10px; margin-bottom: 10px;
+        }
+        .trait-number {
+            width: 28px; height: 28px;
+            background: linear-gradient(135deg, #c41e3a, #ff6b35);
+            color: #fff; border-radius: 50%; display: flex;
+            justify-content: center; align-items: center;
+            font-size: 14px; font-weight: bold; margin-right: 15px;
+        }
+        .trait-text { font-size: 16px; color: #333; line-height: 1.5; padding-top: 3px; }
+        .unlock-section {
+            background: linear-gradient(135deg, #fff5f5, #fff0f0);
+            border-radius: 15px; padding: 25px; margin-bottom: 25px; text-align: center;
+        }
+        .unlock-title { font-size: 18px; font-weight: bold; color: #c41e3a; margin-bottom: 10px; }
+        .unlock-desc { font-size: 14px; color: #666; margin-bottom: 20px; }
+        .unlock-btn {
+            width: 100%; height: 56px;
+            background: linear-gradient(135deg, #c41e3a, #ff6b35);
+            color: #fff; border: none; border-radius: 12px;
+            font-size: 18px; font-weight: bold; cursor: pointer;
+            box-shadow: 0 4px 15px rgba(196,30,58,0.4);
+        }
+        .unlock-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(196,30,58,0.5); }
+        .price-tag { font-size: 24px; }
+        .report-section {
+            display: none; background: #f8f9fa;
+            border-radius: 15px; padding: 25px; margin-bottom: 25px;
+        }
+        .report-section.show { display: block; }
+        .report-header { font-size: 18px; font-weight: bold; color: #c41e3a; margin-bottom: 20px; text-align: center; }
+        .report-wow {
+            background: linear-gradient(135deg, #fff5f5, #fff0f0);
+            border-left: 4px solid #c41e3a; padding: 15px; margin-bottom: 20px;
+            border-radius: 0 10px 10px 0;
+        }
+        .report-wow-text { font-size: 15px; color: #c41e3a; font-weight: bold; }
+        .report-section h4 { font-size: 16px; color: #333; margin-bottom: 12px; margin-top: 20px; }
+        .report-section p { font-size: 14px; color: #555; line-height: 1.8; margin-bottom: 12px; }
+        .report-prescription { background: #e8f5e9; border-radius: 10px; padding: 15px; margin-bottom: 15px; }
+        .report-prescription h5 { font-size: 14px; color: #2e7d32; margin-bottom: 10px; }
+        .report-prescription ul { list-style: none; padding-left: 0; }
+        .report-prescription li { font-size: 13px; color: #388e3c; padding: 5px 0; border-bottom: 1px dashed #c8e6c9; }
+        .report-prescription li:last-child { border-bottom: none; }
+        .report-equipment { background: #e3f2fd; border-radius: 10px; padding: 15px; }
+        .report-equipment h5 { font-size: 14px; color: #1976d2; margin-bottom: 10px; }
+        .report-equipment p { font-size: 13px; color: #1565c0; }
+        .retest-btn {
+            width: 100%; height: 52px;
+            background: #f0f0f0; color: #666;
+            border: 2px solid #e0e0e0; border-radius: 12px;
+            font-size: 17px; font-weight: bold; cursor: pointer;
+        }
+        .retest-btn:hover { background: #e8e8e8; }
+        .footer { text-align: center; font-size: 12px; color: #999; margin-top: 25px; padding-top: 15px; border-top: 1px solid #f0f0f0; }
+        .toast {
+            position: fixed; top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.8); color: #fff;
+            padding: 15px 30px; border-radius: 10px; font-size: 15px;
+            opacity: 0; visibility: hidden; transition: all 0.3s ease;
+            z-index: 2000;
+        }
+        .toast.show { opacity: 1; visibility: visible; }
+
+        .payment-modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.6);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            padding: 20px;
+        }
+        .payment-modal.show { display: flex; }
+        .payment-content {
+            background: #fff;
+            border-radius: 20px;
+            padding: 30px;
+            width: 100%;
+            max-width: 360px;
+            text-align: center;
+            animation: slideUp 0.3s ease;
+        }
+        @keyframes slideUp {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        .payment-icon { font-size: 48px; margin-bottom: 20px; }
+        .payment-title { font-size: 20px; font-weight: bold; color: #333; margin-bottom: 10px; }
+        .payment-desc { font-size: 14px; color: #666; margin-bottom: 25px; }
+        .payment-amount { font-size: 28px; font-weight: bold; color: #c41e3a; margin-bottom: 25px; }
+        .payment-methods { display: flex; flex-direction: column; gap: 12px; margin-bottom: 25px; }
+        .payment-method {
+            display: flex; align-items: center; padding: 18px;
+            border: 2px solid #e0e0e0; border-radius: 12px;
+            cursor: pointer; transition: all 0.3s;
+        }
+        .payment-method:hover { border-color: #ff6b35; }
+        .payment-method.selected { border-color: #c41e3a; background: #fff5f5; }
+        .payment-radio {
+            width: 24px; height: 24px; border: 2px solid #ccc;
+            border-radius: 50%; margin-right: 15px; position: relative;
+        }
+        .payment-method.selected .payment-radio {
+            background: #c41e3a; border-color: #c41e3a;
+        }
+        .payment-radio::after {
+            content: ''; position: absolute; top: 50%; left: 50%;
+            transform: translate(-50%,-50%); width: 10px; height: 10px;
+            background: #fff; border-radius: 50%; opacity: 0;
+        }
+        .payment-method.selected .payment-radio::after { opacity: 1; }
+        .payment-icon-box { width: 40px; height: 40px; border-radius: 10px; display: flex; justify-content: center; align-items: center; margin-right: 15px; }
+        .payment-method-name { font-size: 16px; color: #333; }
+        .qr-code-box {
+            width: 200px; height: 200px; margin: 0 auto 15px;
+            background: #fff; border: 1px solid #e0e0e0;
+            border-radius: 12px; padding: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        .qr-code-box img { width: 100%; height: 100%; object-fit: contain; }
+        .qr-code-desc { font-size: 14px; color: #666; margin-bottom: 10px; }
+        .order-no { font-size: 12px; color: #999; }
+        .payment-btn {
+            width: 100%; height: 52px;
+            background: linear-gradient(135deg, #c41e3a, #ff6b35);
+            color: #fff; border: none; border-radius: 12px;
+            font-size: 17px; font-weight: bold; cursor: pointer;
+        }
+        .payment-close {
+            position: absolute; top: 20px; right: 20px;
+            width: 40px; height: 40px;
+            background: rgba(0,0,0,0.1); border-radius: 50%;
+            display: flex; justify-content: center; align-items: center;
+            font-size: 20px; cursor: pointer;
+        }
+        .payment-loading {
+            display: none;
+            margin-bottom: 20px;
+        }
+        .payment-loading.show { display: block; }
+        .loading-spinner {
+            width: 40px; height: 40px;
+            border: 4px solid #f0f0f0;
+            border-top-color: #c41e3a;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .loading-text { font-size: 14px; color: #666; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="result-header">
+            <div class="mbti-type" id="mbtiType">ESTP</div>
+            <div class="personality-name" id="personalityName">暴力熊猫</div>
+        </div>
+        <div class="warning-box" id="warningBox" style="display:none;">
+            <div class="warning-text">检测到您的答案存在矛盾，测试结果准确度已判定为最低，请谨慎参考</div>
+        </div>
+        <div class="personality-image">
+            <div class="image-content" id="imageContent">🐼</div>
+            <div class="image-label" id="imageLabel">乒乓球达人</div>
+        </div>
+        <div class="traits-section">
+            <div class="trait-item"><div class="trait-number">1</div><div class="trait-text" id="trait1">球风凶猛，一板过是家常便饭</div></div>
+            <div class="trait-item"><div class="trait-number">2</div><div class="trait-text" id="trait2">发球套路深似海，各种逆向旋转</div></div>
+            <div class="trait-item"><div class="trait-number">3</div><div class="trait-text" id="trait3">关键分敢打敢拼，天生大心脏</div></div>
+        </div>
+        <div class="unlock-section" id="unlockSection">
+            <div class="unlock-title">解锁专属涨球报告</div>
+            <div class="unlock-desc">根据你的水平档位，获取个性化的技术分析和4周涨球计划</div>
+            <button class="unlock-btn" id="unlockBtn"><span class="price-tag">¥9.9</span> 立即解锁</button>
+        </div>
+        <div class="report-section" id="reportSection">
+            <div class="report-header">深度涨球报告</div>
+            <div class="report-wow"><div class="report-wow-text" id="reportWow">【WOW】暴力不是蛮干</div></div>
+            <div id="reportContent"></div>
+        </div>
+        <button class="retest-btn" id="retestBtn">重新测试</button>
+        <div class="footer">
+            <p>©️2026 业余乒乓球人的MBTI风格测试</p>
+            <p>版权所有，测试结果仅供参考</p>
+        </div>
+    </div>
+
+    <div class="payment-modal" id="paymentModal">
+        <div class="payment-content">
+            <div class="payment-icon">💳</div>
+            <div class="payment-title">确认支付</div>
+            <div class="payment-desc">解锁深度涨球报告</div>
+            <div class="payment-amount">¥9.9</div>
+            
+            <div class="payment-loading" id="paymentLoading">
+                <div class="loading-spinner"></div>
+                <div class="loading-text">正在支付中...</div>
+            </div>
+
+            <div class="payment-methods" id="paymentMethods">
+                <div class="payment-method" data-method="wechat">
+                    <div class="payment-radio"></div>
+                    <div class="payment-icon-box" style="background:#07c160;">微信</div>
+                    <div class="payment-method-name">微信支付</div>
+                </div>
+                <div class="payment-method" data-method="alipay">
+                    <div class="payment-radio"></div>
+                    <div class="payment-icon-box" style="background:#1677ff;">支付宝</div>
+                    <div class="payment-method-name">支付宝</div>
+                </div>
+            </div>
+
+            <button class="payment-btn" id="paymentBtn">确认支付</button>
+            
+            <div id="qrCodeContainer" style="display:none;">
+                <div class="qr-code-box">
+                    <img id="qrCodeImg" src="" alt="支付二维码" />
+                </div>
+                <div class="qr-code-desc">使用微信或支付宝扫码支付</div>
+                <div class="order-no">订单号: <span id="orderNoDisplay"></span></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+        const data = {
+            'ESTP': { 
+                name:'暴力熊猫', 
+                emoji:'🐼', 
+                label:'暴力熊猫',
+                traits:['球风凶猛，一板过是家常便饭，对手常常被你轰得怀疑人生。','发球套路深似海，各种逆向旋转让对手摸不着头脑。','关键分敢打敢拼，越到赛点越兴奋，天生的大心脏选手。'],
+                reports:{
+                    low:{
+                        wow:'【WOW】暴力不是蛮干，是建立在绝对实力上的艺术', 
+                        analysis:'深度病理分析：你是球场上的力量型选手，打球风格凶猛，但技术粗糙。你过于依赖暴力进攻，忽略了控球和落点变化，常常因为失误丢分。你遇到防守好的对手时，容易陷入急躁，进攻更加盲目，导致失误增多。另外你缺乏对旋转的理解，接发球时容易吃旋转，被对手轻松得分。', 
+                        prescription:['第一周：控制训练，练习轻发力攻球，要求上台率达到80%以上，每天3组每组20球',
+                                      '第二周：旋转识别训练，教练发不同旋转的球，要求正确判断旋转并回接，每天20分钟',
+                                      '第三周：落点训练，练习打斜线、直线、追身三个落点，每天3组每组15球',
+                                      '第四周：实战中每局必须有5板以上的控制球，不允许一味暴力进攻'], 
+                        equipment:'推荐五层纯木底板，提升控球感，搭配38-39度粘性胶皮（国产品牌可选银河、拍里奥系列，进口品牌可选斯蒂卡AC、尤拉入门系列等），海绵厚度2.2mm，提升击球的容错率。'
+                    },
+                    mid:{
+                        wow:'【WOW】力量是你的名片，技巧是你的勋章，两者结合才是无敌', 
+                        analysis:'深度病理分析：你的进攻威胁在同级中属于顶级，但稳定性不足。你过于追求暴力输出，忽略了动作的规范性，导致关键时刻容易失误。你遇到节奏慢的对手时，容易被拖入拉锯战，暴露出耐力不足的问题。另外你在领先时容易放松警惕，被对手逆转得分。', 
+                        prescription:['第一周：动作规范训练，对着镜子练习攻球动作，确保挥拍轨迹正确，每天30分钟',
+                                      '第二周：耐力训练，多球对拉练习，要求连续30板不掉球，每天3组',
+                                      '第三周：节奏控制训练，练习快慢结合的进攻节奏，每天20分钟',
+                                      '第四周：实战中每局必须保持专注，领先时不放松，落后时不急躁'], 
+                        equipment:'推荐均衡型碳素底板，兼顾力量和控制，搭配39度左右的均衡型胶皮（国产品牌可选729、世奥得中端系列，进口品牌可选蝴蝶罗泽娜、多尼克F1中端系列等），底板重量86-88g，兼顾控制和速度。'
+                    },
+                    high:{
+                        wow:'【WOW】暴力美学的极致，是在最短时间内结束战斗，不拖泥带水', 
+                        analysis:'深度病理分析：你的进攻火力已达准专业水准，但战术变化不足。你过于依赖强势进攻，忽略了线路变化和节奏调整，容易被对手摸透套路。你在面对密集防守时，缺乏耐心，常常强行进攻导致失误。另外你在关键分处理上过于单一，容易被对手预判。', 
+                        prescription:['第一周：战术变化训练，练习2-3套进攻套路，每天20分钟',
+                                      '第二周：耐心训练，面对防守时必须连续进攻5板以上再寻求得分，每天20分钟',
+                                      '第三周：关键分训练，8:8时必须变化发球套路，不允许使用单一发球，每天20个关键分场景',
+                                      '第四周：实战中每局必须完成3次以上的战术变化，逐步提升进攻的多样性'], 
+                        equipment:'推荐高支撑力外置纤维底板，适合强力进攻，正手搭配40度左右的高弹胶皮（国产品牌可选省套狂飚、天极系列，进口品牌可选蝴蝶D05、Tenergy 05系列等），反手搭配2.1mm厚度的涩性胶皮，提升进攻的威慑力。'
+                    }
+                }
+            },
+            'ESFP': { 
+                name:'快乐顽童', 
+                emoji:'🤪', 
+                label:'快乐顽童',
+                traits:['打球纯粹为了开心，输赢不重要，享受过程才是王道。','球风飘逸，经常打出令人拍案叫绝的神仙球。','场下是活宝，场上是开心果，和你打球永远不无聊。'],
+                reports:{
+                    low:{
+                        wow:'【WOW】快乐是最好的老师，享受过程比追求结果更重要', 
+                        analysis:'深度病理分析：你是球场上的开心果，打球纯粹为了娱乐，但基本功薄弱。你过于追求花哨动作，忽略了基础技术的练习，常常因为动作不规范导致失误。你遇到认真的对手时，容易心态失衡，觉得对方"破坏气氛"。另外你缺乏系统训练，技术进步缓慢。', 
+                        prescription:['第一周：基础技术训练，每天花30分钟练搓球、挡球、攻球三个基础动作',
+                                      '第二周：动作规范训练，对着视频纠正动作，每天20分钟',
+                                      '第三周：稳定性训练，多球练习要求上台率达到70%以上，每天3组每组15球',
+                                      '第四周：实战中减少花哨动作，专注于稳定得分'], 
+                        equipment:'推荐容错率高的五层纯木底板，帮助建立击球节奏，搭配38-39度粘性胶皮（国产品牌可选银河、拍里奥系列，进口品牌可选斯蒂卡AC、尤拉入门系列等），海绵厚度2.2mm，提升击球的容错率。'
+                    },
+                    mid:{
+                        wow:'【WOW】快乐和进步可以兼得，享受过程的同时也能提升技术', 
+                        analysis:'深度病理分析：你的球感和娱乐精神在同级中属于前列，但技术稳定性不足。你过于追求观赏性，忽略了击球的实用性，常常打出精彩球但失误也很多。你在比赛中容易被情绪左右，开心时打得很好，遇到挫折就容易放弃。另外你缺乏战术意识，打球比较随意。', 
+                        prescription:['第一周：实用技术训练，练习简单有效的得分手段，每天20分钟',
+                                      '第二周：心态训练，比赛中无论领先落后都保持积极心态，每天练习2局',
+                                      '第三周：战术意识训练，学习基本的发球抢攻套路，每天20分钟',
+                                      '第四周：实战中每局必须完成2次战术得分，逐步提升比赛意识'], 
+                        equipment:'推荐均衡型碳素底板，兼顾稳定性和支撑力，搭配39度左右的均衡型胶皮（国产品牌可选729、世奥得中端系列，进口品牌可选蝴蝶罗泽娜、多尼克F1中端系列等），底板重量86-88g，兼顾控制和速度。'
+                    },
+                    high:{
+                        wow:'【WOW】快乐是你的天赋，把天赋转化为实力才是真正的高手', 
+                        analysis:'深度病理分析：你的比赛气质和球感已达准专业水准，但专注力不足。你过于享受比赛过程，忽略了比赛的严肃性，关键时刻容易掉以轻心。你在面对高强度对抗时，容易体力不支，暴露出体能储备不足的问题。另外你缺乏系统的训练计划，进步缺乏持续性。', 
+                        prescription:['第一周：体能训练，每天进行20分钟的耐力跑或跳绳',
+                                      '第二周：专注力训练，练习在嘈杂环境中保持专注，每天20分钟',
+                                      '第三周：系统训练，制定每周训练计划并严格执行',
+                                      '第四周：实战中每局必须保持专注，关键时刻不放松'], 
+                        equipment:'推荐轻量化外置纤维底板，提升进攻威胁，正手搭配39-40度的高弹胶皮（国产品牌可选省套狂飚、天极系列，进口品牌可选蝴蝶D05、Tenergy 05系列等），反手搭配2.1mm厚度的涩性胶皮，提升进攻的威胁性。'
+                    }
+                }
+            },
+            'ENFP': { 
+                name:'灵感大师', 
+                emoji:'✨', 
+                label:'灵感大师',
+                traits:['打球全靠灵感，经常灵光一闪打出神来之笔。','战术天马行空，对手永远猜不到你下一拍会怎么打。','善于观察对手弱点，总能找到出奇制胜的办法。'],
+                reports:{
+                    low:{
+                        wow:'【WOW】灵感是最好的武器，但基础是灵感的土壤', 
+                        analysis:'深度病理分析：你是球场上的创意大师，但基本功不扎实。你过于依赖灵感和创意，忽略了基础技术的打磨，常常因为动作不稳定导致失误。你遇到基本功扎实的对手时，容易被限制发挥。另外你缺乏系统训练，技术不够稳定。', 
+                        prescription:['第一周：基础技术训练，每天花30分钟练搓球、挡球、攻球三个基础动作',
+                                      '第二周：动作稳定性训练，多球练习要求连续15板不掉球，每天3组',
+                                      '第三周：技术整合训练，把创意融入稳定的技术框架中，每天20分钟',
+                                      '第四周：实战中先保证稳定，再寻求创意发挥'], 
+                        equipment:'推荐容错率高的五层纯木底板，帮助建立稳定的击球感觉，搭配38-39度粘性胶皮（国产品牌可选银河、拍里奥系列，进口品牌可选斯蒂卡AC、尤拉入门系列等），海绵厚度2.2mm，提升击球的稳定性。'
+                    },
+                    mid:{
+                        wow:'【WOW】创意和稳定的结合，才是真正的艺术', 
+                        analysis:'深度病理分析：你的战术创意在同级中属于顶级，但技术稳定性不足。你过于追求出奇制胜，忽略了动作的规范性，导致关键时刻容易失误。你在面对密集防守时，容易陷入急躁，创意难以发挥。另外你缺乏对对手的持续压制能力。', 
+                        prescription:['第一周：动作规范训练，对着镜子练习攻球动作，确保挥拍轨迹正确，每天30分钟',
+                                      '第二周：连续进攻训练，多球对拉练习，要求连续20板不掉球，每天3组',
+                                      '第三周：战术压制训练，练习2-3套连续进攻套路，每天20分钟',
+                                      '第四周：实战中每局必须完成3次连续进攻得分，逐步提升压制能力'], 
+                        equipment:'推荐均衡型碳素底板，兼顾稳定性和支撑力，搭配39度左右的均衡型胶皮（国产品牌可选729、世奥得中端系列，进口品牌可选蝴蝶罗泽娜、多尼克F1中端系列等），底板重量86-88g，兼顾控制和速度。'
+                    },
+                    high:{
+                        wow:'【WOW】灵感是天赋，将天赋系统化才是真正的强大', 
+                        analysis:'深度病理分析：你的战术创造力已达准专业水准，但战术执行能力不足。你过于依赖灵感闪现，忽略了战术的系统性和连贯性，常常出现"灵光一现"后无法持续的问题。你在面对同样富有创造力的对手时，容易陷入混乱。另外你缺乏应对突发情况的预案。', 
+                        prescription:['第一周：战术系统化训练，把创意整理成可重复的战术套路，每天20分钟',
+                                      '第二周：应变训练，教练随机喂意外球，练习快速调整战术，每天20分钟',
+                                      '第三周：关键分破局训练，8:8时必须主动变招，不允许按部就班，每天20个关键分场景',
+                                      '第四周：实战中每局必须主动制造1次混乱，打乱对手节奏'], 
+                        equipment:'推荐高响应速度的外置纤维底板，适合快速变线，正手搭配39-40度的控制型胶皮（国产品牌可选天极、狂飚轻系列，进口品牌可选蝴蝶D09c、Tenergy 05系列等），反手搭配2.1mm厚度的涩性胶皮，提升技术的可控性。'
+                    }
+                }
+            },
+            'ENTP': { 
+                name:'战术鬼才', 
+                emoji:'🧠', 
+                label:'战术鬼才',
+                traits:['打球全靠脑子，每一拍都经过精密计算。','擅长制造陷阱，让对手一步步走进你的圈套。','场上像军师，场下像解说，分析起战术头头是道。'],
+                reports:{
+                    low:{
+                        wow:'【WOW】战术是翅膀，但技术是翅膀下的风', 
+                        analysis:'深度病理分析：你是球场上的战术家，但技术执行能力不足。你过于依赖战术分析，忽略了技术的打磨，常常因为动作不到位导致战术无法实现。你遇到技术扎实的对手时，战术难以发挥作用。另外你缺乏实战经验，战术过于理想化。', 
+                        prescription:['第一周：技术基础训练，每天花30分钟练搓球、挡球、攻球三个基础动作',
+                                      '第二周：技术整合训练，把战术意图融入技术动作中，每天20分钟',
+                                      '第三周：实战模拟训练，按照战术套路进行多球练习，每天3组每组15球',
+                                      '第四周：实战中先保证技术到位，再执行战术'], 
+                        equipment:'推荐容错率高的五层纯木底板，帮助建立稳定的击球感觉，搭配38-39度粘性胶皮（国产品牌可选银河、拍里奥系列，进口品牌可选斯蒂卡AC、尤拉入门系列等），海绵厚度2.2mm，提升击球的稳定性。'
+                    },
+                    mid:{
+                        wow:'【WOW】战术和技术的完美结合，才是制胜之道', 
+                        analysis:'深度病理分析：你的战术意识在同级中属于前列，但技术稳定性不足。你过于追求战术变化，忽略了动作的规范性，导致战术执行打折扣。你在面对高强度对抗时，容易技术变形，战术难以落地。另外你缺乏对细节的把控，常常因为小失误导致战术失败。', 
+                        prescription:['第一周：细节打磨训练，每天花20分钟抠击球点和发力顺序',
+                                      '第二周：战术执行训练，按照预设战术进行多球练习，要求战术成功率达到70%以上，每天3组',
+                                      '第三周：压力训练，在比分落后的情况下执行战术，每天20分钟',
+                                      '第四周：实战中每局必须完成2次战术得分，逐步提升战术执行力'], 
+                        equipment:'推荐均衡型碳素底板，兼顾稳定性和支撑力，搭配39度左右的均衡型胶皮（国产品牌可选729、世奥得中端系列，进口品牌可选蝴蝶罗泽娜、多尼克F1中端系列等），底板重量86-88g，兼顾控制和速度。'
+                    },
+                    high:{
+                        wow:'【WOW】战术是骨架，技术是血肉，两者结合才是完整的战士', 
+                        analysis:'深度病理分析：你的战术素养已达准专业水准，但战术灵活性不足。你过于依赖预设战术，忽略了临场调整，常常在战术被破解后陷入被动。你在面对随机应变能力强的对手时，容易被打乱节奏。另外你缺乏对比赛节奏的把控能力。', 
+                        prescription:['第一周：应变训练，教练随机打乱喂球节奏，练习快速调整战术，每天20分钟',
+                                      '第二周：节奏控制训练，练习快慢结合的比赛节奏，每天20分钟',
+                                      '第三周：破局训练，8:8时必须主动打破僵局，不允许按部就班，每天20个关键分场景',
+                                      '第四周：实战中每局必须完成1次节奏变化，逐步提升比赛掌控力'], 
+                        equipment:'推荐高支撑力外置纤维底板，适合强力进攻，正手搭配40度左右的高弹胶皮（国产品牌可选省套狂飚、天极系列，进口品牌可选蝴蝶D05、Tenergy 05系列等），反手搭配2.1mm厚度的涩性胶皮，提升进攻的威慑力。'
+                    }
+                }
+            },
+            'ISTJ': { 
+                name:'稳健磐石', 
+                emoji:'🪨', 
+                label:'稳健磐石',
+                traits:['打球稳如磐石，很少出现失误，让对手抓狂。','基本功扎实，每一拍都打得中规中矩。','擅长打持久战，靠耐心磨死对手。'],
+                reports:{
+                    low:{
+                        wow:'【WOW】稳定是基础，但进攻是提升的阶梯', 
+                        analysis:'深度病理分析：你是球场上的稳定器，但进攻能力不足。你过于追求稳定，忽略了进攻训练，常常因为缺乏威胁导致被动挨打。你遇到进攻型对手时，容易陷入防守的泥潭。另外你缺乏主动变化，容易被对手摸透套路。', 
+                        prescription:['第一周：进攻入门训练，练习轻发力攻球，每天20分钟',
+                                      '第二周：进攻威胁训练，练习打直线、斜线两个进攻落点，每天3组每组15球',
+                                      '第三周：进攻时机训练，学习在相持中寻找进攻机会，每天20分钟',
+                                      '第四周：实战中每局必须主动进攻不少于5次'], 
+                        equipment:'推荐五层纯木底板，提升控球感，搭配38-39度粘性胶皮（国产品牌可选银河、拍里奥系列，进口品牌可选斯蒂卡AC、尤拉入门系列等），海绵厚度2.2mm，提升击球的容错率。'
+                    },
+                    mid:{
+                        wow:'【WOW】稳定是你的盾牌，进攻是你的利剑', 
+                        analysis:'深度病理分析：你的稳定性在同级中属于顶级，但进攻威胁不足。你过于依赖稳健打法，忽略了进攻的重要性，常常因为缺乏杀伤力导致比赛陷入拉锯战。你在面对同样稳健的对手时，容易陷入僵局。另外你缺乏主动变化的意识。', 
+                        prescription:['第一周：进攻意识训练，每局比赛必须主动进攻不少于10次，每天练习3局',
+                                      '第二周：进攻技术训练，练习拉弧圈球和挑打技术，每天20分钟',
+                                      '第三周：变化训练，练习快慢结合的进攻节奏，每天20分钟',
+                                      '第四周：实战中每局必须完成3次进攻得分，逐步提升进攻威胁'], 
+                        equipment:'推荐均衡型碳素底板，兼顾稳定性和支撑力，搭配39度左右的均衡型胶皮（国产品牌可选729、世奥得中端系列，进口品牌可选蝴蝶罗泽娜、多尼克F1中端系列等），底板重量86-88g，兼顾控制和速度。'
+                    },
+                    high:{
+                        wow:'【WOW】稳健是你的根基，把根基转化为进攻的跳板才是高手', 
+                        analysis:'深度病理分析：你的稳定性已达准专业水准，但进攻侵略性不足。你过于追求"无过"，忽略了"有功"，常常在关键时刻缺乏必胜的决心。你在面对进攻型对手时，容易陷入被动防守，难以转换进攻。另外你缺乏关键分的决断力。', 
+                        prescription:['第一周：进攻侵略性训练，每局比赛必须主动进攻不少于15次，每天练习3局',
+                                      '第二周：关键分训练，8:8时必须果断进攻，不允许保守，每天20个关键分场景',
+                                      '第三周：攻防转换训练，练习从防守快速转换到进攻，每天20分钟',
+                                      '第四周：实战中每局必须完成4次进攻得分，逐步提升进攻侵略性'], 
+                        equipment:'推荐高支撑力内置纤维底板，适合主动进攻，正手搭配39-40度的均衡型胶皮（国产品牌可选省套狂飚、天极系列，进口品牌可选蝴蝶D09c、Tenergy 05系列等），反手搭配2.1mm厚度的涩性胶皮，提升进攻的威胁性。'
+                    }
+                }
+            },
+            'ISFJ': { 
+                name:'暖心大哥', 
+                emoji:'🤗', 
+                label:'暖心大哥',
+                traits:['球风温和，就算赢了也会给对手留面子。','善于观察对手情绪，打球很照顾对方感受。','场上是好对手，场下是好朋友。'],
+                reports:{
+                    low:{
+                        wow:'【WOW】友善是美德，但比赛需要全力以赴', 
+                        analysis:'深度病理分析：你是球场上的好好先生，但竞争意识不足。你过于在意对手感受，忽略了比赛的竞争性，常常在领先时放水，导致被对手逆转。你遇到强硬的对手时，容易退缩。另外你缺乏自信心，不敢发挥全部实力。', 
+                        prescription:['第一周：竞争意识训练，每局比赛必须全力以赴，不允许放水，每天练习3局',
+                                      '第二周：自信心训练，练习在领先时保持专注，不放松，每天20分钟',
+                                      '第三周：实力展示训练，练习用全力击球，体会力量感，每天3组每组15球',
+                                      '第四周：实战中每局必须赢下至少2分，不许故意让球'], 
+                        equipment:'推荐容错率高的五层纯木底板，帮助建立击球信心，搭配38-39度粘性胶皮（国产品牌可选银河、拍里奥系列，进口品牌可选斯蒂卡AC、尤拉入门系列等），海绵厚度2.2mm，提升击球的容错率。'
+                    },
+                    mid:{
+                        wow:'【WOW】客气是情分，赢球是本分，比赛时全力以赴是对对手最大的尊重', 
+                        analysis:'深度病理分析：你的球感和亲和力出色，能和任何对手愉快打球，但技术稳定性差。你擅长在被动情况下救球，却不擅长把优势转化为得分，常常把到手的得分机会打丢。你过于在意对手的感受，领先时不好意思发力，怕对手没面子，结果被对手追平。另外你缺乏系统的训练计划，练球时喜欢陪别人练，不愿意花时间提升自己的短板技术。', 
+                        prescription:['第一周：优势转化训练，教练喂容易得分的球，要求必须一板打死，不允许给对方留面子，每天3组每组15球',
+                                      '第二周：竞争意识训练，每局比赛必须全力以赴，不允许放水，每天练习3局比赛',
+                                      '第三周：短板强化训练，每天花30分钟练反手位防守，只练挡球和快撕，不练其他技术，直到能连续防住10板弧圈球',
+                                      '第四周：实战中每局领先时不允许放松，必须一鼓作气拿下，培养乘胜追击的意识'], 
+                        equipment:'推荐均衡型碳素底板，兼顾稳定性和支撑力，搭配39度左右的均衡型胶皮（国产品牌可选729、世奥得中端系列，进口品牌可选蝴蝶罗泽娜、多尼克F1中端系列等），底板重量86-88g，兼顾控制和速度。'
+                    },
+                    high:{
+                        wow:'【WOW】客气是场下的修养，进攻是场上的职责，关键分敢发力才是对对手最大的尊重', 
+                        analysis:'深度病理分析：你的比赛亲和力和稳定性在同级中属于前列，能和任何对手保持良好的比赛氛围，但战术侵略性不足。你过于在意对手的感受，关键分不敢发力，怕对手没面子，错失得分机会。你擅长防守反击，却不愿意主动进攻，导致比赛节奏过于缓慢。另外你在比赛中容易被对手的"客气"影响，放松警惕，被对手偷袭得分。', 
+                        prescription:['第一周：进攻意识训练，每局比赛必须主动进攻不少于10次，不允许一味防守，每天练习3局比赛',
+                                      '第二周：关键分果断训练，8:8时只要有进攻机会必须发力，不允许保守，每天练习20个关键分场景',
+                                      '第三周：侵略性培养训练，比赛中遇到对手的软弱球时，必须果断进攻得分，不允许犹豫，每天练习2小时',
+                                      '第四周：实战中每局必须完成3次主动进攻得分，逐步提升战术的侵略性'], 
+                        equipment:'推荐高支撑力内置纤维底板，适合主动进攻，正手搭配39-40度的均衡型胶皮（国产品牌可选省套狂飚、天极系列，进口品牌可选蝴蝶D09c、Tenergy 05系列等），反手搭配2.1mm厚度的涩性胶皮，提升进攻的威胁性。'
+                    }
+                }
+            },
+            'INFJ': { 
+                name:'洞察者', 
+                emoji:'👁️', 
+                label:'洞察者',
+                traits:['善于洞察对手心理，知己知彼百战百胜。','打球有哲学，每一拍都有深意。','场下沉默寡言，场上却能读懂人心。'],
+                reports:{
+                    low:{
+                        wow:'【WOW】洞察是天赋，但技术是实现洞察的桥梁', 
+                        analysis:'深度病理分析：你是球场上的心理专家，但技术执行能力不足。你过于依赖心理分析，忽略了技术的打磨，常常因为动作不到位导致战术无法实现。你遇到技术扎实的对手时，心理战术难以发挥作用。另外你缺乏自信心，不敢主动进攻。', 
+                        prescription:['第一周：技术基础训练，每天花30分钟练搓球、挡球、攻球三个基础动作',
+                                      '第二周：技术整合训练，把心理洞察融入技术动作中，每天20分钟',
+                                      '第三周：自信心训练，练习主动进攻，体会得分的快感，每天3组每组15球',
+                                      '第四周：实战中先保证技术到位，再运用心理战术'], 
+                        equipment:'推荐容错率高的五层纯木底板，帮助建立稳定的击球感觉，搭配38-39度粘性胶皮（国产品牌可选银河、拍里奥系列，进口品牌可选斯蒂卡AC、尤拉入门系列等），海绵厚度2.2mm，提升击球的稳定性。'
+                    },
+                    mid:{
+                        wow:'【WOW】洞察对手，也要洞察自己，内外兼修才是王道', 
+                        analysis:'深度病理分析：你的心理洞察力在同级中属于顶级，但技术稳定性不足。你过于关注对手的心理，忽略了自身技术的打磨，常常因为失误错失良机。你在面对强硬的对手时，容易陷入自我怀疑。另外你缺乏对自身情绪的控制，容易被对手的节奏带偏。', 
+                        prescription:['第一周：自我控制训练，每天花20分钟练习呼吸调节，保持情绪稳定',
+                                      '第二周：技术稳定性训练，多球练习要求连续20板不掉球，每天3组',
+                                      '第三周：心理博弈训练，练习用眼神、节奏干扰对手，每天20分钟',
+                                      '第四周：实战中每局必须完成2次心理战术得分，逐步提升博弈能力'], 
+                        equipment:'推荐均衡型碳素底板，兼顾稳定性和支撑力，搭配39度左右的均衡型胶皮（国产品牌可选729、世奥得中端系列，进口品牌可选蝴蝶罗泽娜、多尼克F1中端系列等），底板重量86-88g，兼顾控制和速度。'
+                    },
+                    high:{
+                        wow:'【WOW】洞察是你的武器，把武器打磨得更锋利才能战无不胜', 
+                        analysis:'深度病理分析：你的心理洞察力已达准专业水准，但技术细节打磨不足。你过于依赖心理博弈，忽略了技术细节的精进，常常因为细微的动作偏差导致战术失败。你在面对同样善于心理战的对手时，容易陷入僵局。另外你缺乏对关键时刻的把控能力。', 
+                        prescription:['第一周：细节打磨训练，每天花20分钟抠击球点和发力顺序',
+                                      '第二周：关键分训练，8:8时必须保持冷静，不被对手的心理干扰影响，每天20个关键分场景',
+                                      '第三周：战术变化训练，练习在心理博弈中变化战术，每天20分钟',
+                                      '第四周：实战中每局必须完成1次心理战术破局，逐步提升关键时刻的把控能力'], 
+                        equipment:'推荐高响应速度的外置纤维底板，适合快速变线，正手搭配39-40度的控制型胶皮（国产品牌可选天极、狂飚轻系列，进口品牌可选蝴蝶D09c、Tenergy 05系列等），反手搭配2.1mm厚度的涩性胶皮，提升技术的可控性。'
+                    }
+                }
+            },
+            'INTJ': { 
+                name:'战略家', 
+                emoji:'👑', 
+                label:'战略家',
+                traits:['打球像下棋，每一步都在计划之中。','擅长布局，让对手一步步走进你的陷阱。','场上冷静沉稳，总能找到最优解。'],
+                reports:{
+                    low:{
+                        wow:'【WOW】战略是蓝图，但技术是实现蓝图的基石', 
+                        analysis:'深度病理分析：你是球场上的战略家，但技术执行能力不足。你过于依赖战略规划，忽略了技术的打磨，常常因为动作不到位导致战略无法实现。你遇到技术扎实的对手时，战略难以发挥作用。另外你缺乏实战经验，战略过于理想化。', 
+                        prescription:['第一周：技术基础训练，每天花30分钟练搓球、挡球、攻球三个基础动作',
+                                      '第二周：技术整合训练，把战略意图融入技术动作中，每天20分钟',
+                                      '第三周：实战模拟训练，按照战略规划进行多球练习，每天3组每组15球',
+                                      '第四周：实战中先保证技术到位，再执行战略'], 
+                        equipment:'推荐容错率高的五层纯木底板，帮助建立稳定的击球感觉，搭配38-39度粘性胶皮（国产品牌可选银河、拍里奥系列，进口品牌可选斯蒂卡AC、尤拉入门系列等），海绵厚度2.2mm，提升击球的稳定性。'
+                    },
+                    mid:{
+                        wow:'【WOW】战略和技术的完美结合，才是真正的制胜之道', 
+                        analysis:'深度病理分析：你的战略意识在同级中属于前列，但技术稳定性不足。你过于追求战略深度，忽略了动作的规范性，导致战略执行打折扣。你在面对高强度对抗时，容易技术变形，战略难以落地。另外你缺乏对细节的把控，常常因为小失误导致战略失败。', 
+                        prescription:['第一周：细节打磨训练，每天花20分钟抠击球点和发力顺序',
+                                      '第二周：战略执行训练，按照预设战略进行多球练习，要求战略成功率达到70%以上，每天3组',
+                                      '第三周：压力训练，在比分落后的情况下执行战略，每天20分钟',
+                                      '第四周：实战中每局必须完成2次战略得分，逐步提升战略执行力'], 
+                        equipment:'推荐均衡型碳素底板，兼顾稳定性和支撑力，搭配39度左右的均衡型胶皮（国产品牌可选729、世奥得中端系列，进口品牌可选蝴蝶罗泽娜、多尼克F1中端系列等），底板重量86-88g，兼顾控制和速度。'
+                    },
+                    high:{
+                        wow:'【WOW】战略是你的皇冠，把皇冠戴稳才能傲视群雄', 
+                        analysis:'深度病理分析：你的战略素养已达准专业水准，但战略灵活性不足。你过于依赖预设战略，忽略了临场调整，常常在战略被破解后陷入被动。你在面对随机应变能力强的对手时，容易被打乱节奏。另外你缺乏对比赛节奏的把控能力。', 
+                        prescription:['第一周：应变训练，教练随机打乱喂球节奏，练习快速调整战略，每天20分钟',
+                                      '第二周：节奏控制训练，练习快慢结合的比赛节奏，每天20分钟',
+                                      '第三周：破局训练，8:8时必须主动打破僵局，不允许按部就班，每天20个关键分场景',
+                                      '第四周：实战中每局必须完成1次战略变化，逐步提升比赛掌控力'], 
+                        equipment:'推荐高支撑力外置纤维底板，适合强力进攻，正手搭配40度左右的高弹胶皮（国产品牌可选省套狂飚、天极系列，进口品牌可选蝴蝶D05、Tenergy 05系列等），反手搭配2.1mm厚度的涩性胶皮，提升进攻的威慑力。'
+                    }
+                }
+            },
+            'ISTP': { 
+                name:'技术达人', 
+                emoji:'🛠️', 
+                label:'技术达人',
+                traits:['技术全面，正反手均衡，没有明显短板。','手感细腻，能打出各种精细的控球。','遇到难题喜欢钻研，技术提升快。'],
+                reports:{
+                    low:{
+                        wow:'【WOW】技术是基础，但战术是技术的灵魂', 
+                        analysis:'深度病理分析：你是球场上的技术派，但战术意识不足。你过于追求技术完美，忽略了战术的运用，常常因为缺乏战术意图导致被动挨打。你遇到战术型对手时，容易被牵着鼻子走。另外你缺乏比赛意识，打球比较机械。', 
+                        prescription:['第一周：战术入门训练，学习基本的发球抢攻套路，每天20分钟',
+                                      '第二周：战术应用训练，把技术融入战术中，每天3组每组15球',
+                                      '第三周：比赛意识训练，练习观察对手弱点并针对性攻击，每天20分钟',
+                                      '第四周：实战中每局必须完成2次战术得分，逐步提升战术意识'], 
+                        equipment:'推荐五层纯木底板，提升控球感，搭配38-39度粘性胶皮（国产品牌可选银河、拍里奥系列，进口品牌可选斯蒂卡AC、尤拉入门系列等），海绵厚度2.2mm，提升击球的容错率。'
+                    },
+                    mid:{
+                        wow:'【WOW】技术是你的武器库，战术是使用武器的兵法', 
+                        analysis:'深度病理分析：你的技术功底在同级中属于顶级，但战术灵活性不足。你过于依赖技术能力，忽略了战术变化，常常在技术被限制后陷入被动。你遇到同样技术全面的对手时，容易陷入拉锯战。另外你缺乏主动进攻的意识，常常等待对手失误。', 
+                        prescription:['第一周：进攻意识训练，每局比赛必须主动进攻不少于10次，每天练习3局',
+                                      '第二周：战术变化训练，练习2-3套进攻套路，每天20分钟',
+                                      '第三周：主动变化训练，练习在相持中主动变线，每天20分钟',
+                                      '第四周：实战中每局必须完成3次主动进攻得分，逐步提升战术灵活性'], 
+                        equipment:'推荐均衡型碳素底板，兼顾稳定性和支撑力，搭配39度左右的均衡型胶皮（国产品牌可选729、世奥得中端系列，进口品牌可选蝴蝶罗泽娜、多尼克F1中端系列等），底板重量86-88g，兼顾控制和速度。'
+                    },
+                    high:{
+                        wow:'【WOW】技术是你的底气，把底气转化为统治力才是真正的高手', 
+                        analysis:'深度病理分析：你的技术能力已达准专业水准，但比赛统治力不足。你过于追求技术完美，忽略了比赛的胜负本质，常常在关键时刻过于保守。你在面对弱于自己的对手时，缺乏速战速决的能力，容易陷入缠斗。另外你缺乏对比赛节奏的把控。', 
+                        prescription:['第一周：统治力训练，练习在领先时加快节奏，一鼓作气拿下比赛，每天练习3局',
+                                      '第二周：速战速决训练，练习在前5分建立优势，每天20分钟',
+                                      '第三周：节奏把控训练，练习快慢结合的比赛节奏，每天20分钟',
+                                      '第四周：实战中每局必须在前6分建立至少2分优势，逐步提升比赛统治力'], 
+                        equipment:'推荐高支撑力外置纤维底板，适合强力进攻，正手搭配40度左右的高弹胶皮（国产品牌可选省套狂飚、天极系列，进口品牌可选蝴蝶D05、Tenergy 05系列等），反手搭配2.1mm厚度的涩性胶皮，提升进攻的威慑力。'
+                    }
+                }
+            },
+            'ISFP': { 
+                name:'乒乓弥勒佛', 
+                emoji:'😊', 
+                label:'乒乓弥勒佛',
+                traits:['动作飘逸得像在打太极，看着就赏心悦目。','能不抡胳膊就不抡，能靠手感蹭过去的绝不发力。','最烦别人催他"快点打"——我慢慢打还能多活两年呢！'],
+                reports:{
+                    low:{
+                        wow:'【WOW】养生不是躺着不动，动起来但不用力的养生才是真的', 
+                        analysis:'深度病理分析：你是球馆里的"能动就不动"代表，打球纯粹为了活动筋骨，连热身都嫌麻烦，随便甩两下胳膊就算完事。捡球都懒得多走一步，球落到脚边才慢悠悠弯腰，别人催你跑位你就摆手："没必要，能碰到球就行"。动作全凭舒服度，歪打正着接回去几个还挺得意，稍微有点累就直接站着看，别人说你懒你还觉得对方不懂养生："打个球累着干嘛？伤膝盖又伤腰"。', 
+                        prescription:['第一周：每天只练10分钟接发球，不用跑位，站在原地接就行，漏接不超过5个',
+                                      '第二周：每局至少跑两步接球，不许站着看，每天练20分钟',
+                                      '第三周：每天练15分钟慢搓，不用发力，把球搓到台面上就行',
+                                      '第四周：实战每局至少接10个球，不许主动放弃，打完浑身微汗就达标'], 
+                        equipment:'推荐超轻入门级纯木底板，重量不到80g，拿着不坠手，搭配38度免灌粘性胶皮（国产品牌可选银河N系列、拍里奥入门款，进口品牌可选尤拉轻量款等），不用灌油不用粘，省得麻烦，打久了手腕也不酸。'
+                    },
+                    mid:{
+                        wow:'【WOW】发力不一定累，用对腰腿合力反而比瞎蹭更省力', 
+                        analysis:'深度病理分析：你球感不错，动作飘逸得像打太极，别人看了都夸"这球打得真舒展"，但你就是不想发力——觉得抡胳膊太累，发力后还要还原更麻烦。对手爆冲你就退台慢慢蹭，能防回去就防，防不回去就摊手："这球太快，接不到正常"。别人催你进攻你说"没必要，养生嘛，发力伤胳膊"，领先了也不乘胜追击，觉得追分到11分太费时间，干脆放慢节奏磨着打，对手急得跳脚你还慢悠悠擦汗。', 
+                        prescription:['第一周：每天练10分钟轻发力攻球，不用抡太狠，把球轻轻拍到台面上就行，每天20分钟',
+                                      '第二周：每局至少有5次主动进攻，不用发力太猛，能得分最好，得分不了就继续防',
+                                      '第三周：每天练15分钟慢节奏相持，不用跑太快，和对手对拉10板就算过关',
+                                      '第四周：实战每局至少主动进攻10次，不许全程防守，赢了也不用作秀，自己舒服就行'], 
+                        equipment:'推荐轻量化均衡型碳素底板，重量85g左右，不用灌油，搭配39度软弹胶皮（国产品牌可选729轻量系列、世奥得中庸款，进口品牌可选蝴蝶ROZENA轻量款等），击球反馈柔和，发力不震手，不用频繁折腾器材，符合你怕麻烦的性格。'
+                    },
+                    high:{
+                        wow:'【WOW】适度赢球反而更开心，总让着别人反而憋得慌', 
+                        analysis:'深度病理分析：你技术其实已到准专业水准，抡拉砍搓样样都会，但就是懒得拼——赢了还要跟球友客套应酬太麻烦，输了正好名正言顺休息。对手猛攻你就退台慢慢兜，别人说你"浪费天赋"你还觉得对方不懂生活："赢了又怎样？不如省点力气回家喝茶"。关键分也懒得搏杀，8:10落后就摆手："这局算了，下一局再打"，哪怕有机会一板打死，你也只是轻轻抹过去，觉得"发力太累，赢了还要被拉着复盘更累"。', 
+                        prescription:['第一周：每天练20分钟轻进攻，不用太猛，把球稳稳打到空位就行',
+                                      '第二周：每局至少主动进攻15次，不用搏杀，能得分就收，得分不了就防',
+                                      '第三周：每天练25分钟慢节奏战术，比如搓后轻拉、防后轻带，不用太复杂',
+                                      '第四周：实战每局至少赢3分，不许故意放水，赢了也不用应酬，自己偷着乐就行，输了就当多练了会儿球'], 
+                        equipment:'推荐高灵敏度轻量化外置纤维底板，重量86g左右，响应快不用费力气，搭配39-40度软弹胶皮（国产品牌可选省套狂飚轻量款、天极慢攻系列，进口品牌可选蝴蝶D09c轻量款等），反手配2.1mm涩性软海绵，不用灌油不用频繁换胶皮，省心得很，完美契合你"能不动就不动"的养生哲学。'
+                    }
+                }
+            },
+            'INFP': { 
+                name:'诗人', 
+                emoji:'🎭', 
+                label:'诗意球者',
+                traits:['打球像写诗，追求意境和美感。','善于打出艺术性的好球，让人赏心悦目。','输赢不重要，享受过程才是真谛。'],
+                reports:{
+                    low:{
+                        wow:'【WOW】艺术是灵魂，但技术是表达灵魂的语言', 
+                        analysis:'深度病理分析：你是球场上的艺术家，但技术功底不足。你过于追求艺术感，忽略了基础技术的打磨，常常因为动作不稳定导致失误。你遇到注重实用的对手时，艺术打法难以发挥作用。另外你缺乏自信心，不敢主动进攻。', 
+                        prescription:['第一周：技术基础训练，每天花30分钟练搓球、挡球、攻球三个基础动作',
+                                      '第二周：技术整合训练，把艺术感融入稳定的技术框架中，每天20分钟',
+                                      '第三周：自信心训练，练习主动进攻，体会得分的快感，每天3组每组15球',
+                                      '第四周：实战中先保证稳定，再追求艺术感'], 
+                        equipment:'推荐容错率高的五层纯木底板，帮助建立稳定的击球感觉，搭配38-39度粘性胶皮（国产品牌可选银河、拍里奥系列，进口品牌可选斯蒂卡AC、尤拉入门系列等），海绵厚度2.2mm，提升击球的稳定性。'
+                    },
+                    mid:{
+                        wow:'【WOW】艺术和实用的完美结合，才是真正的大师', 
+                        analysis:'深度病理分析：你的艺术性打法在同级中属于顶级，但技术稳定性不足。你过于追求观赏性，忽略了击球的实用性，常常打出精彩球但失误也很多。你在比赛中容易被情绪左右，状态好时打得很好，遇到挫折就容易放弃。另外你缺乏战术意识，打球比较随性。', 
+                        prescription:['第一周：实用技术训练，练习简单有效的得分手段，每天20分钟',
+                                      '第二周：心态训练，比赛中无论领先落后都保持积极心态，每天练习2局',
+                                      '第三周：战术意识训练，学习基本的发球抢攻套路，每天20分钟',
+                                      '第四周：实战中每局必须完成2次战术得分，逐步提升比赛意识'], 
+                        equipment:'推荐均衡型碳素底板，兼顾稳定性和支撑力，搭配39度左右的均衡型胶皮（国产品牌可选729、世奥得中端系列，进口品牌可选蝴蝶罗泽娜、多尼克F1中端系列等），底板重量86-88g，兼顾控制和速度。'
+                    },
+                    high:{
+                        wow:'【WOW】艺术是你的标签，把标签转化为实力才是真正的艺术家', 
+                        analysis:'深度病理分析：你的艺术性打法已达准专业水准，但比赛执行力不足。你过于追求完美，忽略了比赛的结果导向，常常在关键时刻过于保守。你在面对强硬的对手时，容易陷入自我怀疑。另外你缺乏对比赛节奏的把控能力。', 
+                        prescription:['第一周：执行力训练，练习在关键时刻果断出手，每天20分钟',
+                                      '第二周：节奏把控训练，练习快慢结合的比赛节奏，每天20分钟',
+                                      '第三周：关键分训练，8:8时必须果断进攻，不允许保守，每天20个关键分场景',
+                                      '第四周：实战中每局必须完成3次进攻得分，逐步提升比赛执行力'], 
+                        equipment:'推荐高响应速度的外置纤维底板，适合快速变线，正手搭配39-40度的控制型胶皮（国产品牌可选天极、狂飚轻系列，进口品牌可选蝴蝶D09c、Tenergy 05系列等），反手搭配2.1mm厚度的涩性胶皮，提升技术的可控性。'
+                    }
+                }
+            },
+            'INTP': { 
+                name:'器宗传人', 
+                emoji:'🔧', 
+                label:'器材达人',
+                traits:['聊起底板胶皮能说三天三夜，参数背得比教练还熟。','拿着顶配器材，打出的球还不如百元入门拍的效果。','最烦别人说他"纸上谈兵"——我这叫器材美学，懂不懂！'],
+                reports:{
+                    low:{
+                        wow:'【WOW】器材是辅助，技术是根本', 
+                        analysis:'深度病理分析：你是球场上的参数专家，还没开打就先分析球拍的性能，但技术粗糙。你过于依赖器材，觉得"好拍子能弥补技术缺陷"，忽略了基础技术的练习，常常因为动作不规范失误。你遇到打不过的对手时，容易把原因归结为"拍子没选对"，而不是反思技术问题。另外你花了大量时间研究器材参数，却不愿意花时间练球，导致"拿着万元拍，打着入门球"。', 
+                        prescription:['第一周：基础技术训练，每天花30分钟练搓球、挡球、攻球三个基础动作，不换拍子，直到动作规范',
+                                      '第二周：心态调整训练，输球后不允许抱怨器材，只复盘自己的技术问题，每天复盘1场比赛',
+                                      '第三周：发力控制训练，练习用70%的力量击球，体会动作规范，每天3组每组20球',
+                                      '第四周：实战中每局前5分必须用基础技术得分，不允许依赖器材的容错性，逐步夯实技术基础'], 
+                        equipment:'推荐容错率高的五层纯木底板，帮助规范动作，搭配38-39度粘性胶皮（国产品牌可选银河、拍里奥系列，进口品牌可选斯蒂卡AC、尤拉入门系列等），海绵厚度2.2mm，提升击球的稳定性。'
+                    },
+                    mid:{
+                        wow:'【WOW】器材的参数是参考，技术的细节是保障', 
+                        analysis:'深度病理分析：你的器材知识和技术分析能力在同级中属于前列，能精准判断器材的优劣，但技术细节粗糙。你过于追求器材的参数完美，忽略了技术细节的打磨，比如击球点、发力顺序，导致技术发挥不稳定。你遇到技术瓶颈时，第一反应是换器材，而不是打磨技术细节。另外你在关键分容易因为担心器材性能不足而动作变形，错失得分机会。', 
+                        prescription:['第一周：技术细节训练，每天花20分钟抠击球点和发力顺序，比如正手攻球的击球点在身体前方，每天3组每组15球',
+                                      '第二周：器材定力训练，连续2周不允许换器材，专注于用现有器材打磨技术，每天练习2小时',
+                                      '第三周：关键分信心训练，8:8时相信自己的器材和技术，不允许怀疑器材性能，每天练习20个关键分场景',
+                                      '第四周：实战中每局必须注意技术细节，比如步伐调整、击球点选择，逐步提升技术的稳定性'], 
+                        equipment:'推荐均衡型碳素底板，兼顾稳定性和支撑力，搭配39度左右的均衡型胶皮（国产品牌可选729、世奥得中端系列，进口品牌可选蝴蝶罗泽娜、多尼克F1中端系列等），底板重量86-88g，兼顾控制和速度。'
+                    },
+                    high:{
+                        wow:'【WOW】器材的极致性能是理想，顺手的器材是现实', 
+                        analysis:'深度病理分析：你的器材素养和技术分析能力已达准专业水准，能根据自身技术特点精准匹配器材，但过度依赖器材参数是瓶颈。你遇到瓶颈时，容易陷入"换器材-适应器材-再换器材"的循环，忽略了技术本身的突破。你过于追求器材的极致性能，不愿意用"不完美但顺手"的器材，导致比赛中常常因为不适应器材而发挥失常。另外你在比赛中容易被器材的细微差别影响心态，比如海绵硬度差1度就觉得打不好。', 
+                        prescription:['第一周：适应性训练，刻意用"不完美"的器材（比如海绵硬度差1度、底板重量差5g）练球，每天练习2小时',
+                                      '第二周：技术突破训练，不换器材的情况下，尝试突破现有技术瓶颈，比如提升击球速度、旋转，每天练习30分钟',
+                                      '第三周：心态调整训练，比赛中忽略器材的细微差别，专注于技术发挥，每天练习2局比赛',
+                                      '第四周：实战中每局必须用现有的器材打出最佳水平，不允许借口器材问题，逐步建立对器材的信心'], 
+                        equipment:'推荐高响应速度的外置纤维底板，容错率低但上限高，适合技术突破，正手搭配39-40度的控制型胶皮（国产品牌可选天极、狂飚轻系列，进口品牌可选蝴蝶D09c、Tenergy 05系列等），反手搭配2.1mm厚度的涩性胶皮，提升技术的可控性。'
+                    }
+                }
+            },
+            'ESTJ': { 
+                name:'赛博程序员', 
+                emoji:'💻', 
+                label:'程序球手',
+                traits:['打球必须按流程来，热身没做完连球都不摸。','对手不按套路出牌就慌，动作直接变形到妈都不认识。','最烦别人打乱节奏："能不能按设定好的程序打？！"'],
+                reports:{
+                    low:{
+                        wow:'【WOW】规则是辅助，得分是目的', 
+                        analysis:'深度病理分析：你是球场上的规则守护者，打球时严格遵守流程，但灵活性极差。你习惯了固定的热身流程、击球节奏，一旦被打乱就容易失误。你过于追求动作的标准性，忽略了击球的实际效果，常出现"动作满分但球下网"的尴尬。另外你遇到不按套路出牌的对手时，容易陷入混乱，因为你预设的所有流程都失效了。', 
+                        prescription:['第一周：灵活性训练，练习用不同动作击出相同效果的球，比如甩腕、撇拉都能把球打到对方反手位，每天20分钟',
+                                      '第二周：流程打破训练，教练不按套路喂球，强迫用最快的速度调整动作，每天3组每组20球',
+                                      '第三周：效果优先训练，只要能把球打上台，允许动作不标准，每天练习30分钟多球',
+                                      '第四周：实战中每局必须打破1次固定流程，比如不按习惯的热身顺序，逐步提升灵活性'], 
+                        equipment:'推荐稳定性高的五层纯木底板，帮助建立击球节奏，搭配38-39度粘性胶皮（国产品牌可选银河、拍里奥系列，进口品牌可选斯蒂卡AC、尤拉入门系列等），海绵厚度2.2mm，提升击球的容错率。'
+                    },
+                    mid:{
+                        wow:'【WOW】流程是框架，变招是灵魂', 
+                        analysis:'深度病理分析：你的技术规范性和战术执行力在同级中属于前列，能严格执行预设战术，但战术僵化是问题。你习惯了一套固定战术，不管对手是否适应都坚持执行，直到被对手打穿才被迫调整。你缺乏临场变通能力，关键分不敢用非常规战术，总觉得"没练过的技术不能用"，反而错失得分机会。另外你的步法移动过于刻板，只会按固定路线跑位，遇到对手变线容易卡位失误。', 
+                        prescription:['第一周：备选战术训练，每天学习2-3套备选发球套路，每天20分钟',
+                                      '第二周：变招训练，练习在相持中主动变线，每天3组每组15球',
+                                      '第三周：关键分冒险训练，8:8时尝试用一次没练过的技术，每天20个关键分场景',
+                                      '第四周：实战中每局必须完成1次变招，逐步提升战术灵活性'], 
+                        equipment:'推荐均衡型碳素底板，兼顾稳定性和支撑力，搭配39度左右的均衡型胶皮（国产品牌可选729、世奥得中端系列，进口品牌可选蝴蝶罗泽娜、多尼克F1中端系列等），底板重量86-88g，兼顾控制和速度。'
+                    },
+                    high:{
+                        wow:'【WOW】秩序是理想，但混乱是常态', 
+                        analysis:'深度病理分析：你的战术素养已达准专业水准，但过度依赖秩序是瓶颈。你习惯了按部就班的战术执行，一旦比赛节奏被打乱就容易慌乱。你在面对风格多变的对手时，缺乏应对混乱局面的能力。另外你过于追求完美的战术执行，忽略了比赛中的不确定性。', 
+                        prescription:['第一周：混乱应对训练，教练随机打乱喂球节奏，练习快速调整战术，每天20分钟',
+                                      '第二周：无序战术训练，练习在非理想状态下得分，每天3组每组15球',
+                                      '第三周：关键分破局训练，8:8时必须主动打破僵局，不允许按部就班，每天20个关键分场景',
+                                      '第四周：实战中每局必须完成1次混乱破局，逐步提升应对复杂局面的能力'], 
+                        equipment:'推荐高支撑力外置纤维底板，适合快速变线，正手搭配40度左右的高弹胶皮（国产品牌可选省套狂飚、天极系列，进口品牌可选蝴蝶D05、Tenergy 05系列等），反手搭配2.1mm厚度的涩性胶皮，提升进攻的威慑力。'
+                    }
+                }
+            },
+            'ENTJ': { 
+                name:'球场指挥官', 
+                emoji:'🎖️', 
+                label:'指挥大师',
+                traits:['场上霸气侧漏，气场强大到能震慑对手。','善于指挥全场，战术执行力超强。','天生的领导者，队友都愿意听你指挥。'],
+                reports:{
+                    low:{
+                        wow:'【WOW】霸气是名片，但技术是底气', 
+                        analysis:'深度病理分析：你是球场上的领导者，但技术功底不足。你过于依赖气场和领导力，忽略了技术的打磨，常常因为动作不到位导致失误。你遇到技术扎实的对手时，领导力难以发挥作用。另外你缺乏自信心，不敢发挥全部实力。', 
+                        prescription:['第一周：技术基础训练，每天花30分钟练搓球、挡球、攻球三个基础动作',
+                                      '第二周：技术整合训练，把领导力融入技术动作中，每天20分钟',
+                                      '第三周：自信心训练，练习主动进攻，体会得分的快感，每天3组每组15球',
+                                      '第四周：实战中先保证技术到位，再发挥领导力'], 
+                        equipment:'推荐容错率高的五层纯木底板，帮助建立稳定的击球感觉，搭配38-39度粘性胶皮（国产品牌可选银河、拍里奥系列，进口品牌可选斯蒂卡AC、尤拉入门系列等），海绵厚度2.2mm，提升击球的稳定性。'
+                    },
+                    mid:{
+                        wow:'【WOW】领导力和技术的完美结合，才是真正的领袖', 
+                        analysis:'深度病理分析：你的领导力在同级中属于顶级，但技术稳定性不足。你过于追求霸气和掌控力，忽略了动作的规范性，导致关键时刻容易失误。你在面对强硬的对手时，容易陷入急躁，技术变形。另外你缺乏对细节的把控，常常因为小失误导致战术失败。', 
+                        prescription:['第一周：细节打磨训练，每天花20分钟抠击球点和发力顺序',
+                                      '第二周：战术执行训练，按照预设战术进行多球练习，要求战术成功率达到70%以上，每天3组',
+                                      '第三周：压力训练，在比分落后的情况下执行战术，每天20分钟',
+                                      '第四周：实战中每局必须完成2次战术得分，逐步提升战术执行力'], 
+                        equipment:'推荐均衡型碳素底板，兼顾稳定性和支撑力，搭配39度左右的均衡型胶皮（国产品牌可选729、世奥得中端系列，进口品牌可选蝴蝶罗泽娜、多尼克F1中端系列等），底板重量86-88g，兼顾控制和速度。'
+                    },
+                    high:{
+                        wow:'【WOW】霸气转化为统治力，才是真正的王者', 
+                        analysis:'深度病理分析：你的领导力已达准专业水准，但比赛统治力不足。你过于追求掌控全场，忽略了比赛的胜负本质，常常在关键时刻过于保守。你在面对弱于自己的对手时，缺乏速战速决的能力，容易陷入缠斗。另外你缺乏对比赛节奏的把控。', 
+                        prescription:['第一周：统治力训练，练习在领先时加快节奏，一鼓作气拿下比赛，每天练习3局',
+                                      '第二周：速战速决训练，练习在前5分建立优势，每天20分钟',
+                                      '第三周：节奏把控训练，练习快慢结合的比赛节奏，每天20分钟',
+                                      '第四周：实战中每局必须在前6分建立至少2分优势，逐步提升比赛统治力'], 
+                        equipment:'推荐高支撑力外置纤维底板，适合强力进攻，正手搭配40度左右的高弹胶皮（国产品牌可选省套狂飚、天极系列，进口品牌可选蝴蝶D05、Tenergy 05系列等），反手搭配2.1mm厚度的涩性胶皮，提升进攻的威慑力。'
+                    }
+                }
+            },
+            'ESFJ': { 
+                name:'社交达人', 
+                emoji:'👫', 
+                label:'社交高手',
+                traits:['场下能和任何人打成一片，社交能力max。','打球时照顾对手感受，让人感觉很舒服。','赢了也不张扬，输了也不气馁，心态超好。'],
+                reports:{
+                    low:{
+                        wow:'【WOW】社交是优势，但技术是基础', 
+                        analysis:'深度病理分析：你是球场上的社交达人，但技术功底不足。你过于依赖社交能力，忽略了技术的打磨，常常因为动作不规范导致失误。你遇到认真的对手时，社交优势难以发挥作用。另外你缺乏自信心，不敢主动进攻。', 
+                        prescription:['第一周：技术基础训练，每天花30分钟练搓球、挡球、攻球三个基础动作',
+                                      '第二周：技术整合训练，把社交优势融入技术动作中，每天20分钟',
+                                      '第三周：自信心训练，练习主动进攻，体会得分的快感，每天3组每组15球',
+                                      '第四周：实战中先保证技术到位，再发挥社交优势'], 
+                        equipment:'推荐容错率高的五层纯木底板，帮助建立稳定的击球感觉，搭配38-39度粘性胶皮（国产品牌可选银河、拍里奥系列，进口品牌可选斯蒂卡AC、尤拉入门系列等），海绵厚度2.2mm，提升击球的稳定性。'
+                    },
+                    mid:{
+                        wow:'【WOW】社交和实力的完美结合，才是真正的赢家', 
+                        analysis:'深度病理分析：你的社交能力在同级中属于顶级，但技术稳定性不足。你过于追求和谐氛围，忽略了击球的实用性，常常因为想让对手舒服而放过得分机会。你在比赛中容易被情绪左右，开心时打得很好，遇到挫折就容易放弃。另外你缺乏战术意识，打球比较随性。', 
+                        prescription:['第一周：实用技术训练，练习简单有效的得分手段，每天20分钟',
+                                      '第二周：竞争意识训练，比赛中无论领先落后都保持积极心态，每天练习2局',
+                                      '第三周：战术意识训练，学习基本的发球抢攻套路，每天20分钟',
+                                      '第四周：实战中每局必须完成2次战术得分，逐步提升比赛意识'], 
+                        equipment:'推荐均衡型碳素底板，兼顾稳定性和支撑力，搭配39度左右的均衡型胶皮（国产品牌可选729、世奥得中端系列，进口品牌可选蝴蝶罗泽娜、多尼克F1中端系列等），底板重量86-88g，兼顾控制和速度。'
+                    },
+                    high:{
+                        wow:'【WOW】亲和力转化为实力，才是真正的高手', 
+                        analysis:'深度病理分析：你的社交能力已达准专业水准，但进攻侵略性不足。你过于追求和谐，忽略了比赛的竞争性，常常在关键时刻不敢发力。你在面对强硬的对手时，容易陷入被动防守，难以转换进攻。另外你缺乏关键分的决断力。', 
+                        prescription:['第一周：进攻意识训练，每局比赛必须主动进攻不少于10次，每天练习3局',
+                                      '第二周：关键分训练，8:8时必须果断进攻，不允许保守，每天20个关键分场景',
+                                      '第三周：侵略性训练，练习在相持中主动变线，每天20分钟',
+                                      '第四周：实战中每局必须完成3次进攻得分，逐步提升进攻侵略性'], 
+                        equipment:'推荐高支撑力内置纤维底板，适合主动进攻，正手搭配39-40度的均衡型胶皮（国产品牌可选省套狂飚、天极系列，进口品牌可选蝴蝶D09c、Tenergy 05系列等），反手搭配2.1mm厚度的涩性胶皮，提升进攻的威胁性。'
+                    }
+                }
+            },
+            'INFJ': { 
+                name:'心灵捕手', 
+                emoji:'💫', 
+                label:'心灵捕手',
+                traits:['能看透对手心理，提前预判他的回球。','打球很有灵性，善于用节奏控制对手。','外表平静，内心戏超多。'],
+                reports:{
+                    low:{
+                        wow:'【WOW】洞察力是天赋，但技术是实现洞察的桥梁', 
+                        analysis:'深度病理分析：你是球场上的心理专家，但技术执行能力不足。你过于依赖心理分析，忽略了技术的打磨，常常因为动作不到位导致战术无法实现。你遇到技术扎实的对手时，心理战术难以发挥作用。另外你缺乏自信心，不敢主动进攻。', 
+                        prescription:['第一周：技术基础训练，每天花30分钟练搓球、挡球、攻球三个基础动作',
+                                      '第二周：技术整合训练，把心理洞察融入技术动作中，每天20分钟',
+                                      '第三周：自信心训练，练习主动进攻，体会得分的快感，每天3组每组15球',
+                                      '第四周：实战中先保证技术到位，再运用心理战术'], 
+                        equipment:'推荐容错率高的五层纯木底板，帮助建立稳定的击球感觉，搭配38-39度粘性胶皮（国产品牌可选银河、拍里奥系列，进口品牌可选斯蒂卡AC、尤拉入门系列等），海绵厚度2.2mm，提升击球的稳定性。'
+                    },
+                    mid:{
+                        wow:'【WOW】洞察和技术的完美结合，才是真正的高手', 
+                        analysis:'深度病理分析：你的心理洞察力在同级中属于顶级，但技术稳定性不足。你过于关注对手的心理，忽略了自身技术的打磨，常常因为失误错失良机。你在面对强硬的对手时，容易陷入自我怀疑。另外你缺乏对自身情绪的控制，容易被对手的节奏带偏。', 
+                        prescription:['第一周：自我控制训练，每天花20分钟练习呼吸调节，保持情绪稳定',
+                                      '第二周：技术稳定性训练，多球练习要求连续20板不掉球，每天3组',
+                                      '第三周：心理博弈训练，练习用眼神、节奏干扰对手，每天20分钟',
+                                      '第四周：实战中每局必须完成2次心理战术得分，逐步提升博弈能力'], 
+                        equipment:'推荐均衡型碳素底板，兼顾稳定性和支撑力，搭配39度左右的均衡型胶皮（国产品牌可选729、世奥得中端系列，进口品牌可选蝴蝶罗泽娜、多尼克F1中端系列等），底板重量86-88g，兼顾控制和速度。'
+                    },
+                    high:{
+                        wow:'【WOW】洞察打磨锋利，才是真正的利器', 
+                        analysis:'深度病理分析：你的心理洞察力已达准专业水准，但技术细节打磨不足。你过于依赖心理博弈，忽略了技术细节的精进，常常因为细微的动作偏差导致战术失败。你在面对同样善于心理战的对手时，容易陷入僵局。另外你缺乏对关键时刻的把控能力。', 
+                        prescription:['第一周：细节打磨训练，每天花20分钟抠击球点和发力顺序',
+                                      '第二周：关键分训练，8:8时必须保持冷静，不被对手的心理干扰影响，每天20个关键分场景',
+                                      '第三周：战术变化训练，练习在心理博弈中变化战术，每天20分钟',
+                                      '第四周：实战中每局必须完成1次心理战术破局，逐步提升关键时刻的把控能力'], 
+                        equipment:'推荐高响应速度的外置纤维底板，适合快速变线，正手搭配39-40度的控制型胶皮（国产品牌可选天极、狂飚轻系列，进口品牌可选蝴蝶D09c、Tenergy 05系列等），反手搭配2.1mm厚度的涩性胶皮，提升技术的可控性。'
+                    }
+                }
+            }
+        };
+
+        const mbti = localStorage.getItem('mbtiType') || 'ESTP';
+        const hasIntegrityIssue = localStorage.getItem('integrityScore') === 'false';
+        const level = localStorage.getItem('userLevel') || 'mid';
+        const p = data[mbti] || data['ESTP'];
+        const report = p.reports[level] || p.reports['mid'];
+
+        let pollInterval = null;
+
+        document.getElementById('mbtiType').textContent = mbti;
+        document.getElementById('personalityName').textContent = p.name;
+        document.getElementById('imageContent').textContent = p.emoji;
+        document.getElementById('imageLabel').textContent = p.label || p.name;
+        document.getElementById('trait1').textContent = p.traits[0];
+        document.getElementById('trait2').textContent = p.traits[1];
+        document.getElementById('trait3').textContent = p.traits[2];
+
+        if (hasIntegrityIssue) {
+            document.getElementById('warningBox').style.display = 'block';
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            toast.textContent = msg;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 2000);
+        }
+
+        function unlockReport() {
+            document.getElementById('unlockSection').style.display = 'none';
+            document.getElementById('reportSection').classList.add('show');
+            document.getElementById('reportWow').textContent = report.wow;
+            document.getElementById('reportContent').innerHTML = `
+                <h4>深度病理分析</h4>
+                <p>${report.analysis}</p>
+                <div class="report-prescription">
+                    <h5>📅 4周涨球计划</h5>
+                    <ul>
+                        <li>${report.prescription[0]}</li>
+                        <li>${report.prescription[1]}</li>
+                        <li>${report.prescription[2]}</li>
+                        <li>${report.prescription[3]}</li>
+                    </ul>
+                </div>
+                <div class="report-equipment">
+                    <h5>🎾 器材推荐</h5>
+                    <p>${report.equipment}</p>
+                </div>
+            `;
+            window.PING.markAsPaid(mbti);
+        }
+
+        const canSkipPay = window.PING.canSkipPayment(mbti);
+        if (canSkipPay) {
+            showToast('检测到您已解锁过此结果，直接查看完整报告');
+            setTimeout(unlockReport, 1000);
+        }
+
+        let selectedPaymentMethod = 'wechat';
+        
+        document.querySelectorAll('.payment-method').forEach(el => {
+            el.addEventListener('click', () => {
+                document.querySelectorAll('.payment-method').forEach(e => e.classList.remove('selected'));
+                el.classList.add('selected');
+                selectedPaymentMethod = el.dataset.method;
+            });
+        });
+
+        document.getElementById('unlockBtn').addEventListener('click', async () => {
+            document.getElementById('paymentModal').classList.add('show');
+            document.getElementById('qrCodeContainer').style.display = 'none';
+            document.getElementById('paymentMethods').style.display = 'flex';
+            document.getElementById('paymentBtn').style.display = 'block';
+            document.getElementById('paymentLoading').classList.remove('show');
+            document.getElementById('paymentSuccess').style.display = 'none';
+        });
+
+        document.getElementById('paymentBtn').addEventListener('click', async () => {
+            const loading = document.getElementById('paymentLoading');
+            const methods = document.getElementById('paymentMethods');
+            const btn = document.getElementById('paymentBtn');
+            const qrContainer = document.getElementById('qrCodeContainer');
+            
+            loading.classList.add('show');
+            methods.style.display = 'none';
+            btn.style.display = 'none';
+
+            try {
+                const result = await window.PING.createOrder(9.9, level, mbti);
+                
+                if (result.success) {
+                    loading.classList.remove('show');
+                    qrContainer.style.display = 'block';
+                    document.getElementById('qrCodeImg').src = result.qrCodeUrl;
+                    document.getElementById('orderNoDisplay').textContent = result.orderNo;
+                    
+                    localStorage.setItem('currentOrderNo', result.orderNo);
+                    
+                    pollInterval = setInterval(async () => {
+                        const checkResult = await window.PING.checkOrder(result.orderNo);
+                        if (checkResult.success && checkResult.status === 'paid') {
+                            clearInterval(pollInterval);
+                            document.getElementById('paymentModal').classList.remove('show');
+                            showToast('支付成功！');
+                            unlockReport();
+                        } else if (checkResult.success && checkResult.status === 'failed') {
+                            clearInterval(pollInterval);
+                            showToast('支付失败，请重试');
+                            methods.style.display = 'flex';
+                            btn.style.display = 'block';
+                            qrContainer.style.display = 'none';
+                        }
+                    }, 3000);
+                } else {
+                    throw new Error(result.message);
+                }
+            } catch (error) {
+                loading.classList.remove('show');
+                methods.style.display = 'flex';
+                btn.style.display = 'block';
+                showToast('创建订单失败，请重试');
+            }
+        });
+
+        document.getElementById('paymentModal').addEventListener('click', (e) => {
+            if (e.target === document.getElementById('paymentModal')) {
+                document.getElementById('paymentModal').classList.remove('show');
+                if (pollInterval) {
+                    clearInterval(pollInterval);
+                }
+            }
+        });
+
+        document.getElementById('retestBtn').addEventListener('click', () => {
+            window.PING.resetTest();
+            window.location.href = 'index.html';
+        });
