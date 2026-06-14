@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>测试结果 - 乒乓球MBTI</title>
-    <script src="/script.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -306,8 +305,10 @@
 
     <div class="toast" id="toast"></div>
 
+    <script src="/script.js"></script>
     <script>
-        const data = {
+        document.addEventListener('DOMContentLoaded', function() {
+            const data = {
             'ESTP': { 
                 name:'暴力熊猫', 
                 emoji:'🐼', 
@@ -1010,3 +1011,7 @@
             window.PING.resetTest();
             window.location.href = 'index.html';
         });
+        });
+    </script>
+</body>
+</html>
