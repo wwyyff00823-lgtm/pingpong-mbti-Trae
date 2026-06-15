@@ -1,6 +1,5 @@
 /**
- * 查询订单状态 - Netlify Function
- * 调用虎皮椒API查询真实订单状态
+ * 查询订单状态 - Netlify Function (虎皮椒V3)
  */
 
 const https = require('https');
@@ -34,28 +33,30 @@ exports.handler = async function(event, context) {
             };
         }
 
-        const timestamp = Math.floor(Date.now() / 1000).toString();
-        
+        const timestamp = Date.now().toString();
+        const nonce_str = Math.random().toString(36).substr(2, 15);
+
         const signParams = {
-            appid: HUPIJIAO_CONFIG.appid,
-            timestamp,
-            trade_order_id: orderNo
-        };
-
-        const sign = generateSign(signParams);
-
-        const postData = JSON.stringify({
-            version: '1.1',
             appid: HUPIJIAO_CONFIG.appid,
             trade_order_id: orderNo,
             timestamp,
+            nonce_str
+        };
+
+        const sign = generateSignV3(signParams);
+
+        const postData = JSON.stringify({
+            appid: HUPIJIAO_CONFIG.appid,
+            trade_order_id: orderNo,
+            timestamp,
+            nonce_str,
             sign
         });
 
         const options = {
             hostname: HUPIJIAO_CONFIG.api_host,
             port: 443,
-            path: '/payment/query',
+            path: '/v3/payment/query',
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -70,11 +71,11 @@ exports.handler = async function(event, context) {
                     data += chunk;
                 });
                 res.on('end', () => {
-                    console.log('虎皮椒查询订单响应:', data);
+                    console.log('虎皮椒V3查询订单响应:', data);
                     try {
                         resolve(JSON.parse(data));
                     } catch (e) {
-                        console.error('JSON解析错误:', e.message, '原始数据:', data);
+                        console.error('JSON解析错误:', e.message);
                         reject(new Error('Invalid JSON response'));
                     }
                 });
@@ -88,14 +89,16 @@ exports.handler = async function(event, context) {
             req.end();
         });
 
-        if (result.errcode === 0) {
-            let status = 'pending';
-            if (result.status === 'OD') {
-                status = 'paid';
-            } else if (result.status === 'WP') {
-                status = 'pending';
-            } else if (result.status === 'CD') {
-                status = 'failed';
+        if (result.code === 0 || result.status === 'success') {
+            const status = result.data?.status || result.status;
+            let orderStatus = 'pending';
+            
+            if (status === 'success' || status === 'paid' || status === 'OD') {
+                orderStatus = 'paid';
+            } else if (status === 'pending' || status === 'WP') {
+                orderStatus = 'pending';
+            } else if (status === 'failed' || status === 'CD') {
+                orderStatus = 'failed';
             }
 
             return {
@@ -104,9 +107,9 @@ exports.handler = async function(event, context) {
                 body: JSON.stringify({
                     success: true,
                     order_no: orderNo,
-                    status: status,
+                    status: orderStatus,
                     message: '订单状态查询成功',
-                    hupijiao_status: result.status
+                    hupijiao_status: status
                 })
             };
         } else {
@@ -116,7 +119,7 @@ exports.handler = async function(event, context) {
                 headers,
                 body: JSON.stringify({
                     success: false,
-                    message: result.errmsg || '查询失败'
+                    message: result.msg || result.message || '查询失败'
                 })
             };
         }
@@ -134,11 +137,18 @@ exports.handler = async function(event, context) {
     }
 };
 
-function generateSign(params) {
+function generateSignV3(params) {
     const crypto = require('crypto');
     
     const sortedKeys = Object.keys(params).sort();
-    let signStr = sortedKeys.map(key => `${key}=${params[key]}`).join('&');
+    let signStr = sortedKeys.map(key => {
+        const value = params[key];
+        if (value === undefined || value === null || value === '') {
+            return '';
+        }
+        return `${key}=${value}`;
+    }).filter(item => item !== '').join('&');
+    
     signStr += '&appsecret=' + HUPIJIAO_CONFIG.appsecret;
     
     return crypto.createHash('md5').update(signStr).digest('hex');
