@@ -76,7 +76,7 @@ exports.handler = async function(event, context) {
         const options = {
             hostname: HUPIJIAO_CONFIG.api_host,
             port: 443,
-            path: '/payment/create',
+            path: '/payment/index.html',
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -91,15 +91,28 @@ exports.handler = async function(event, context) {
                     data += chunk;
                 });
                 res.on('end', () => {
+                    console.log('虎皮椒API响应状态:', res.statusCode);
+                    console.log('虎皮椒API响应原始数据:', data.substring(0, 800));
+                    
                     try {
-                        resolve(JSON.parse(data));
+                        let jsonResult;
+                        if (data.trim().startsWith('<')) {
+                            console.log('响应是XML格式，尝试转换');
+                            jsonResult = xmlToJson(data);
+                        } else {
+                            jsonResult = JSON.parse(data);
+                        }
+                        resolve(jsonResult);
                     } catch (e) {
-                        reject(new Error('Invalid JSON response'));
+                        console.error('解析错误:', e.message);
+                        console.error('原始响应:', data);
+                        reject(new Error('解析响应失败: ' + data.substring(0, 100)));
                     }
                 });
             });
 
             req.on('error', (e) => {
+                console.error('请求错误:', e);
                 reject(e);
             });
 
@@ -151,4 +164,30 @@ function generateSign(params) {
     signStr += '&appsecret=' + HUPIJIAO_CONFIG.appsecret;
     
     return crypto.createHash('md5').update(signStr).digest('hex');
+}
+
+function xmlToJson(xml) {
+    const result = {};
+    const regex = /<(\w+)[^>]*>([^<]*)</g;
+    let match;
+    
+    while ((match = regex.exec(xml)) !== null) {
+        const key = match[1].toLowerCase();
+        let value = match[2].trim();
+        
+        if (!isNaN(value)) {
+            value = parseFloat(value);
+        }
+        
+        if (result[key]) {
+            if (!Array.isArray(result[key])) {
+                result[key] = [result[key]];
+            }
+            result[key].push(value);
+        } else {
+            result[key] = value;
+        }
+    }
+    
+    return result;
 }
