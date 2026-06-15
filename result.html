@@ -248,6 +248,9 @@
             btn.textContent = '创建订单中...';
             btn.disabled = true;
             
+            // 生成订单号
+            var orderNo = 'PING' + Date.now() + Math.random().toString(36).substr(2, 8).toUpperCase();
+            
             // 调用Netlify Function创建订单
             fetch('/.netlify/functions/create-order', {
                 method: 'POST',
@@ -255,28 +258,24 @@
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    amount: 9.9,
-                    mbti_type: mbti,
-                    level: level,
-                    user_id: localStorage.getItem('userId') || 'anonymous'
+                    order_no: orderNo,
+                    price: '990',
+                    goods_name: '乒乓球MBTI测试报告解锁'
                 })
             })
             .then(function(response) {
                 return response.json();
             })
             .then(function(data) {
-                if (data.success) {
+                if (data.code === 0) {
                     // 订单创建成功，显示支付二维码
                     currentOrderNo = data.order_no;
                     document.getElementById('paymentModal').className = 'modal show';
                     document.getElementById('qrCodeContainer').style.display = 'block';
                     btn.style.display = 'none';
                     
-                    // 使用虎皮椒返回的二维码URL
-                    if (data.qr_code_url) {
-                        document.getElementById('qrCodeImg').src = data.qr_code_url;
-                    } else if (data.pay_url) {
-                        // 如果没有二维码URL，生成二维码指向支付链接
+                    // 使用虎皮椒返回的支付链接生成二维码
+                    if (data.pay_url) {
                         var qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=' + encodeURIComponent(data.pay_url);
                         document.getElementById('qrCodeImg').src = qrUrl;
                     }
@@ -287,7 +286,7 @@
                     startOrderPolling(currentOrderNo);
                 } else {
                     // 订单创建失败
-                    showToast('订单创建失败: ' + data.message);
+                    showToast('订单创建失败: ' + (data.msg || '未知错误'));
                     methodsDiv.style.display = 'flex';
                     btn.textContent = '确认支付';
                     btn.disabled = false;
@@ -305,17 +304,20 @@
         // 轮询订单状态
         function startOrderPolling(orderNo) {
             pollInterval = setInterval(function() {
-                fetch('/.netlify/functions/check-order?order_no=' + orderNo, {
-                    method: 'GET',
+                fetch('/.netlify/functions/check-order', {
+                    method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
-                    }
+                    },
+                    body: JSON.stringify({
+                        order_no: orderNo
+                    })
                 })
                 .then(function(response) {
                     return response.json();
                 })
                 .then(function(data) {
-                    if (data.status === 'paid') {
+                    if (data.code === 0 && data.paid) {
                         // 支付成功
                         clearInterval(pollInterval);
                         document.getElementById('paymentModal').className = 'modal';
