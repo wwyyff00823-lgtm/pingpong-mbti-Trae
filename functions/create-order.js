@@ -113,6 +113,8 @@ exports.handler = async function(event, context) {
         if (ret.url_qrcode || ret.url) {
             return { statusCode: 200, headers, body: JSON.stringify({ 
                 code: 0, 
+                url_qrcode: ret.url_qrcode,
+                url: ret.url,
                 pay_url: ret.url_qrcode || ret.url, 
                 order_no: order_no 
             }) };
