@@ -1,5 +1,3 @@
-# 更新notify.js
-cat > /Users/figowang/Desktop/PING/functions/notify.js << 'EOF'
 const crypto = require('crypto');
 const qs = require('querystring');
 
@@ -7,23 +5,15 @@ exports.handler = async function(event, context) {
     const APPSECRET = "685ed8bb1d5468e8771aaee1109913c4";
     
     let body = {};
-    if (event.httpMethod === 'POST') {
-        const contentType = event.headers['content-type'] || event.headers['Content-Type'] || '';
-        
-        if (contentType.includes('application/json')) {
-            try {
-                body = JSON.parse(event.body || '{}');
-            } catch (e) {
-                body = qs.parse(event.body || '');
-            }
-        } else {
-            body = qs.parse(event.body || '');
-        }
+    const contentType = event.headers['content-type'] || event.headers['Content-Type'] || '';
+    
+    if (contentType.includes('application/json')) {
+        body = JSON.parse(event.body || '{}');
     } else {
-        body = event.queryStringParameters || {};
+        body = qs.parse(event.body || '');
     }
 
-    console.log('收到回调:', body);
+    console.log('Notify:', body);
 
     const { trade_order_id, status, hash } = body;
     
@@ -32,12 +22,12 @@ exports.handler = async function(event, context) {
     const calcHash = generateXhHash(params, APPSECRET);
 
     if (calcHash !== hash) {
-        console.log('签名验证失败:', calcHash, hash);
+        console.log('Sign error:', calcHash, hash);
         return { statusCode: 200, body: "fail" };
     }
 
     if (status === 'OD') {
-        console.log(`订单 ${trade_order_id} 支付成功`);
+        console.log('Paid:', trade_order_id);
         return { statusCode: 200, body: "success" };
     }
 
@@ -51,12 +41,9 @@ function generateXhHash(params, hashkey) {
         const val = params[key];
         if (key !== 'hash' && val !== null && val !== undefined && val !== '') {
             if (arg) arg += '&';
-            arg += `${key}=${val}`;
+            arg += key + '=' + val;
         }
     });
     arg += hashkey;
     return crypto.createHash('md5').update(arg).digest('hex').toLowerCase();
 }
-EOF
-
-echo "=== notify.js 已更新 ==="

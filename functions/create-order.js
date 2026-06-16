@@ -1,5 +1,3 @@
-# 强制重新写入create-order.js
-cat > /Users/figowang/Desktop/PING/functions/create-order.js << 'EOF'
 const crypto = require('crypto');
 const qs = require('querystring');
 
@@ -19,7 +17,7 @@ exports.handler = async function(event, context) {
     }
 
     if (event.httpMethod !== 'POST') {
-        return { statusCode: 405, headers, body: JSON.stringify({ code: -1, msg: "仅支持POST请求" }) };
+        return { statusCode: 405, headers, body: JSON.stringify({ code: -1, msg: "POST only" }) };
     }
 
     const APPID = "201906181673";
@@ -29,12 +27,12 @@ exports.handler = async function(event, context) {
     try {
         body = JSON.parse(event.body || '{}');
     } catch (e) {
-        return { statusCode: 400, headers, body: JSON.stringify({ code: -1, msg: "请求体格式错误" }) };
+        return { statusCode: 400, headers, body: JSON.stringify({ code: -1, msg: "Invalid JSON" }) };
     }
 
     const { order_no, price, goods_name } = body;
     if (!order_no || !price || !goods_name) {
-        return { statusCode: 400, headers, body: JSON.stringify({ code: -1, msg: "订单参数缺失" }) };
+        return { statusCode: 400, headers, body: JSON.stringify({ code: -1, msg: "Missing params" }) };
     }
 
     const time = Math.floor(Date.now() / 1000);
@@ -49,8 +47,8 @@ exports.handler = async function(event, context) {
         total_fee: price,
         title: goods_name,
         time: time,
-        notify_url: `${protocol}://${domain}/.netlify/functions/notify`,
-        return_url: `${protocol}://${domain}/result.html`,
+        notify_url: protocol + "://" + domain + "/.netlify/functions/notify",
+        return_url: protocol + "://" + domain + "/result.html",
         nonce_str: nonce_str
     };
 
@@ -59,54 +57,34 @@ exports.handler = async function(event, context) {
 
     const postData = qs.stringify(params);
 
-    console.log('=== 虎皮椒请求 ===');
-    console.log('API地址:', API_URL);
-    console.log('发送数据:', postData);
+    console.log('API URL:', API_URL);
+    console.log('Post Data:', postData);
 
     try {
         const response = await fetch(API_URL, {
             method: 'POST',
-            headers: { 
-                'Content-Type': 'application/x-www-form-urlencoded',
-                'User-Agent': 'Mozilla/5.0 (Node.js)'
-            },
-            body: postData,
-            timeout: 30000
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: postData
         });
         
-        const raw = await response.text();
-        console.log('响应状态:', response.status);
-        console.log('响应数据:', raw);
+        let raw = await response.text();
+        console.log('Response:', raw);
         
         if (!raw || raw.startsWith('<')) {
-            console.log('尝试备用API地址:', API_URL_BACKUP);
+            console.log('Try backup URL:', API_URL_BACKUP);
             const backupResponse = await fetch(API_URL_BACKUP, {
                 method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                    'User-Agent': 'Mozilla/5.0 (Node.js)'
-                },
-                body: postData,
-                timeout: 30000
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: postData
             });
-            const backupRaw = await backupResponse.text();
-            console.log('备用地址响应:', backupRaw);
-            
-            if (!backupRaw || backupRaw.startsWith('<')) {
-                return { statusCode: 200, headers, body: JSON.stringify({ code: -99, msg: "API调用失败，请稍后重试" }) };
-            }
-            raw = backupRaw;
+            raw = await backupResponse.text();
+            console.log('Backup Response:', raw);
         }
         
-        let ret;
-        try {
-            ret = JSON.parse(raw);
-        } catch (e) {
-            return { statusCode: 200, headers, body: JSON.stringify({ code: -99, msg: `JSON解析失败: ${e.message}` }) };
-        }
+        let ret = JSON.parse(raw);
 
         if (ret.errcode && ret.errcode !== 0) {
-            return { statusCode: 200, headers, body: JSON.stringify({ code: -2, msg: ret.errmsg || '支付创建失败' }) };
+            return { statusCode: 200, headers, body: JSON.stringify({ code: -2, msg: ret.errmsg || 'Failed' }) };
         }
 
         if (ret.url_qrcode || ret.url) {
@@ -116,11 +94,11 @@ exports.handler = async function(event, context) {
                 order_no: order_no 
             }) };
         } else {
-            return { statusCode: 200, headers, body: JSON.stringify({ code: -2, msg: '未获取到支付链接' }) };
+            return { statusCode: 200, headers, body: JSON.stringify({ code: -2, msg: 'No URL' }) };
         }
     } catch (err) {
-        console.error('请求异常:', err);
-        return { statusCode: 500, headers, body: JSON.stringify({ code: -3, msg: `请求异常：${err.message}` }) };
+        console.error('Error:', err);
+        return { statusCode: 500, headers, body: JSON.stringify({ code: -3, msg: err.message }) };
     }
 };
 
@@ -131,14 +109,9 @@ function generateXhHash(params, hashkey) {
         const val = params[key];
         if (key !== 'hash' && val !== null && val !== undefined && val !== '') {
             if (arg) arg += '&';
-            arg += `${key}=${val}`;
+            arg += key + '=' + val;
         }
     });
     arg += hashkey;
     return crypto.createHash('md5').update(arg).digest('hex').toLowerCase();
 }
-EOF
-
-echo ""
-echo "=== 文件已重新写入 ==="
-cat /Users/figowang/Desktop/PING/functions/create-order.js | grep "API_URL"
