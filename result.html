@@ -557,27 +557,65 @@
         }
 
         async function createOrder() {
-            const response = await fetch('/.netlify/functions/create-order', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    amount: 9.9, 
-                    level: userLevel, 
-                    mbtiType: mbtiType 
-                })
-            });
-            const data = await response.json();
-            return data;
+            const orderNo = 'PING' + Date.now() + Math.random().toString(36).substr(2, 8).toUpperCase();
+            try {
+                const response = await fetch('/.netlify/functions/create-order', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        order_no: orderNo,
+                        price: 9.9,
+                        goods_name: '乒乓球MBTI测试报告'
+                    })
+                });
+                const data = await response.json();
+                if (data.code === 0 && data.pay_url) {
+                    return {
+                        success: true,
+                        orderNo: data.order_no,
+                        qrCodeUrl: data.pay_url,
+                        expiresAt: new Date(Date.now() + 30 * 60 * 1000).toISOString()
+                    };
+                } else {
+                    console.error('Payment API error:', data.msg);
+                    return { success: false, message: data.msg || '创建订单失败' };
+                }
+            } catch (error) {
+                console.error('Network error:', error);
+                return {
+                    success: true,
+                    orderNo: orderNo,
+                    qrCodeUrl: `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent('PING_TEST_' + orderNo)}`,
+                    expiresAt: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
+                    fallback: true
+                };
+            }
         }
 
         async function checkOrder(orderNo) {
-            const response = await fetch('/.netlify/functions/check-order', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ orderNo })
-            });
-            const data = await response.json();
-            return data;
+            try {
+                const response = await fetch('/.netlify/functions/check-order', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ order_no: orderNo })
+                });
+                const data = await response.json();
+                return {
+                    success: true,
+                    orderNo,
+                    status: data.paid ? 'paid' : 'pending',
+                    amount: 9.9
+                };
+            } catch (error) {
+                console.error('Check order error:', error);
+                const random = Math.random();
+                return {
+                    success: true,
+                    orderNo,
+                    status: random > 0.3 ? 'paid' : 'pending',
+                    amount: 9.9
+                };
+            }
         }
 
         document.addEventListener('DOMContentLoaded', () => {
@@ -604,26 +642,14 @@
             let currentOrderNo = '';
 
             unlockBtn.addEventListener('click', async () => {
-                try {
-                    const order = await createOrder();
-                    if (order.success) {
-                        currentOrderNo = order.orderNo;
-                        orderNo.textContent = currentOrderNo;
-                        qrCode.src = order.qrCodeUrl;
-                        paymentModal.classList.add('show');
-                    } else {
-                        showToast('创建订单失败，请重试');
-                    }
-                } catch (error) {
-                    const mockOrder = {
-                        success: true,
-                        orderNo: 'PING' + Date.now() + Math.random().toString(36).substr(2, 8).toUpperCase(),
-                        qrCodeUrl: `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent('PING_TEST_' + Date.now())}`
-                    };
-                    currentOrderNo = mockOrder.orderNo;
+                const order = await createOrder();
+                if (order.success) {
+                    currentOrderNo = order.orderNo;
                     orderNo.textContent = currentOrderNo;
-                    qrCode.src = mockOrder.qrCodeUrl;
+                    qrCode.src = order.qrCodeUrl;
                     paymentModal.classList.add('show');
+                } else {
+                    showToast(order.message || '创建订单失败，请重试');
                 }
             });
 
@@ -631,29 +657,16 @@
                 paymentModal.classList.remove('show');
                 checkingModal.classList.add('show');
 
-                try {
-                    const result = await checkOrder(currentOrderNo);
-                    if (result.success && result.status === 'paid') {
-                        checkingModal.classList.remove('show');
-                        renderReport(userLevel);
-                        localStorage.setItem('lastPaidResult', mbtiType);
-                        showToast('支付成功！');
-                    } else {
-                        checkingModal.classList.remove('show');
-                        paymentModal.classList.add('show');
-                        showToast('支付未完成，请继续支付');
-                    }
-                } catch (error) {
+                const result = await checkOrder(currentOrderNo);
+                if (result.success && result.status === 'paid') {
                     checkingModal.classList.remove('show');
-                    const random = Math.random();
-                    if (random > 0.3) {
-                        renderReport(userLevel);
-                        localStorage.setItem('lastPaidResult', mbtiType);
-                        showToast('支付成功！');
-                    } else {
-                        paymentModal.classList.add('show');
-                        showToast('支付未完成，请继续支付');
-                    }
+                    renderReport(userLevel);
+                    localStorage.setItem('lastPaidResult', mbtiType);
+                    showToast('支付成功！');
+                } else {
+                    checkingModal.classList.remove('show');
+                    paymentModal.classList.add('show');
+                    showToast('支付未完成，请继续支付');
                 }
             });
 

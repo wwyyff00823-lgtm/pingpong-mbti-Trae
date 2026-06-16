@@ -4,6 +4,23 @@ const qs = require('querystring');
 const API_URL = "https://api.xunhupay.com/payment/do.html";
 const API_URL_BACKUP = "https://api.dpweixin.com/payment/do.html";
 
+const APPID = "201906181673";
+const APPSECRET = "685ed8bb1d5468e8771aaee1109913c4";
+
+function generateXhHash(params, hashkey) {
+    const sortedKeys = Object.keys(params).sort();
+    let arg = '';
+    sortedKeys.forEach(key => {
+        const val = params[key];
+        if (key !== 'hash' && val !== null && val !== undefined && val !== '') {
+            if (arg) arg += '&';
+            arg += key + '=' + val;
+        }
+    });
+    arg += hashkey;
+    return crypto.createHash('md5').update(arg).digest('hex').toLowerCase();
+}
+
 exports.handler = async function(event, context) {
     const headers = {
         'Access-Control-Allow-Origin': '*',
@@ -20,9 +37,6 @@ exports.handler = async function(event, context) {
         return { statusCode: 405, headers, body: JSON.stringify({ code: -1, msg: "POST only" }) };
     }
 
-    const APPID = "201906181673";
-    const APPSECRET = "685ed8bb1d5468e8771aaee1109913c4";
-
     let body;
     try {
         body = JSON.parse(event.body || '{}');
@@ -31,8 +45,9 @@ exports.handler = async function(event, context) {
     }
 
     const { order_no, price, goods_name } = body;
+    
     if (!order_no || !price || !goods_name) {
-        return { statusCode: 400, headers, body: JSON.stringify({ code: -1, msg: "Missing params" }) };
+        return { statusCode: 400, headers, body: JSON.stringify({ code: -1, msg: "Missing params: order_no, price, goods_name are required" }) };
     }
 
     const time = Math.floor(Date.now() / 1000);
@@ -61,10 +76,11 @@ exports.handler = async function(event, context) {
     console.log('Post Data:', postData);
 
     try {
-        const response = await fetch(API_URL, {
+        let response = await fetch(API_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: postData
+            body: postData,
+            timeout: 10000
         });
         
         let raw = await response.text();
@@ -72,46 +88,39 @@ exports.handler = async function(event, context) {
         
         if (!raw || raw.startsWith('<')) {
             console.log('Try backup URL:', API_URL_BACKUP);
-            const backupResponse = await fetch(API_URL_BACKUP, {
+            response = await fetch(API_URL_BACKUP, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: postData
+                body: postData,
+                timeout: 10000
             });
-            raw = await backupResponse.text();
+            raw = await response.text();
             console.log('Backup Response:', raw);
         }
         
-        let ret = JSON.parse(raw);
+        let ret;
+        try {
+            ret = JSON.parse(raw);
+        } catch (e) {
+            console.error('JSON parse error:', e);
+            return { statusCode: 200, headers, body: JSON.stringify({ code: -2, msg: 'Invalid response format' }) };
+        }
 
         if (ret.errcode && ret.errcode !== 0) {
-            return { statusCode: 200, headers, body: JSON.stringify({ code: -2, msg: ret.errmsg || 'Failed' }) };
+            return { statusCode: 200, headers, body: JSON.stringify({ code: -2, msg: ret.errmsg || 'Payment API error' }) };
         }
 
         if (ret.url_qrcode || ret.url) {
             return { statusCode: 200, headers, body: JSON.stringify({ 
                 code: 0, 
-                pay_url: ret.url || ret.url_qrcode, 
+                pay_url: ret.url_qrcode || ret.url, 
                 order_no: order_no 
             }) };
         } else {
-            return { statusCode: 200, headers, body: JSON.stringify({ code: -2, msg: 'No URL' }) };
+            return { statusCode: 200, headers, body: JSON.stringify({ code: -2, msg: 'No payment URL returned' }) };
         }
     } catch (err) {
         console.error('Error:', err);
         return { statusCode: 500, headers, body: JSON.stringify({ code: -3, msg: err.message }) };
     }
 };
-
-function generateXhHash(params, hashkey) {
-    const sortedKeys = Object.keys(params).sort();
-    let arg = '';
-    sortedKeys.forEach(key => {
-        const val = params[key];
-        if (key !== 'hash' && val !== null && val !== undefined && val !== '') {
-            if (arg) arg += '&';
-            arg += key + '=' + val;
-        }
-    });
-    arg += hashkey;
-    return crypto.createHash('md5').update(arg).digest('hex').toLowerCase();
-}

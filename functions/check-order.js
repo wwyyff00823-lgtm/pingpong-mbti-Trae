@@ -1,5 +1,20 @@
 const crypto = require('crypto');
 const qs = require('querystring');
+const fs = require('fs');
+const path = require('path');
+
+function getOrdersFilePath() {
+    return path.join(__dirname, '../orders.json');
+}
+
+function loadOrders() {
+    try {
+        const data = fs.readFileSync(getOrdersFilePath(), 'utf8');
+        return JSON.parse(data);
+    } catch {
+        return {};
+    }
+}
 
 exports.handler = async function(event, context) {
     const headers = {
@@ -22,6 +37,13 @@ exports.handler = async function(event, context) {
     
     if (!order_no) {
         return { statusCode: 400, headers, body: JSON.stringify({ code: -1, msg: "Missing order_no" }) };
+    }
+
+    const orders = loadOrders();
+    const order = orders[order_no];
+    
+    if (order && order.paid) {
+        return { statusCode: 200, headers, body: JSON.stringify({ code: 0, paid: true, msg: "Paid" }) };
     }
 
     return { statusCode: 200, headers, body: JSON.stringify({ code: 0, paid: false, msg: "Not paid" }) };
