@@ -1,5 +1,10 @@
+# 强制重新写入create-order.js
+cat > /Users/figowang/Desktop/PING/functions/create-order.js << 'EOF'
 const crypto = require('crypto');
 const qs = require('querystring');
+
+const API_URL = "https://api.xunhupay.com/payment/do.html";
+const API_URL_BACKUP = "https://api.dpweixin.com/payment/do.html";
 
 exports.handler = async function(event, context) {
     const headers = {
@@ -19,7 +24,6 @@ exports.handler = async function(event, context) {
 
     const APPID = "201906181673";
     const APPSECRET = "685ed8bb1d5468e8771aaee1109913c4";
-    const API_URL = "https://api.xunhupay.com/payment/create";
 
     let body;
     try {
@@ -34,7 +38,7 @@ exports.handler = async function(event, context) {
     }
 
     const time = Math.floor(Date.now() / 1000);
-    const nonce_str = crypto.randomBytes(8).toString('hex');
+    const nonce_str = crypto.randomBytes(16).toString('hex');
     const protocol = event.headers['x-forwarded-proto'] || 'https';
     const domain = event.headers.host;
 
@@ -45,57 +49,96 @@ exports.handler = async function(event, context) {
         total_fee: price,
         title: goods_name,
         time: time,
-        nonce_str: nonce_str,
         notify_url: `${protocol}://${domain}/.netlify/functions/notify`,
         return_url: `${protocol}://${domain}/result.html`,
-        type: "wechat"
+        nonce_str: nonce_str
     };
 
-    const keys = Object.keys(params).sort();
-    let signStr = '';
-    keys.forEach(key => {
-        if (params[key] !== '' && params[key] !== undefined) {
-            signStr += `${key}=${params[key]}&`;
-        }
-    });
-    signStr = signStr.slice(0, -1);
-    signStr += '&key=' + APPSECRET;
-    const sign = crypto.createHash('md5').update(signStr).digest('hex').toUpperCase();
-    params.sign = sign;
+    const hash = generateXhHash(params, APPSECRET);
+    params.hash = hash;
 
     const postData = qs.stringify(params);
 
+    console.log('=== 虎皮椒请求 ===');
     console.log('API地址:', API_URL);
     console.log('发送数据:', postData);
 
     try {
         const response = await fetch(API_URL, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: postData
+            headers: { 
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'User-Agent': 'Mozilla/5.0 (Node.js)'
+            },
+            body: postData,
+            timeout: 30000
         });
+        
         const raw = await response.text();
         console.log('响应状态:', response.status);
         console.log('响应数据:', raw);
+        
+        if (!raw || raw.startsWith('<')) {
+            console.log('尝试备用API地址:', API_URL_BACKUP);
+            const backupResponse = await fetch(API_URL_BACKUP, {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'User-Agent': 'Mozilla/5.0 (Node.js)'
+                },
+                body: postData,
+                timeout: 30000
+            });
+            const backupRaw = await backupResponse.text();
+            console.log('备用地址响应:', backupRaw);
+            
+            if (!backupRaw || backupRaw.startsWith('<')) {
+                return { statusCode: 200, headers, body: JSON.stringify({ code: -99, msg: "API调用失败，请稍后重试" }) };
+            }
+            raw = backupRaw;
+        }
         
         let ret;
         try {
             ret = JSON.parse(raw);
         } catch (e) {
-            return { statusCode: 200, headers, body: JSON.stringify({ code: -99, msg: `非JSON响应: ${raw.substring(0, 50)}` }) };
+            return { statusCode: 200, headers, body: JSON.stringify({ code: -99, msg: `JSON解析失败: ${e.message}` }) };
         }
 
-        if (ret.code === 1 && ret.data) {
+        if (ret.errcode && ret.errcode !== 0) {
+            return { statusCode: 200, headers, body: JSON.stringify({ code: -2, msg: ret.errmsg || '支付创建失败' }) };
+        }
+
+        if (ret.url_qrcode || ret.url) {
             return { statusCode: 200, headers, body: JSON.stringify({ 
                 code: 0, 
-                pay_url: ret.data.pay_url || ret.data.url || '', 
+                pay_url: ret.url || ret.url_qrcode, 
                 order_no: order_no 
             }) };
         } else {
-            return { statusCode: 200, headers, body: JSON.stringify({ code: -2, msg: ret.msg || '支付创建失败' }) };
+            return { statusCode: 200, headers, body: JSON.stringify({ code: -2, msg: '未获取到支付链接' }) };
         }
     } catch (err) {
         console.error('请求异常:', err);
         return { statusCode: 500, headers, body: JSON.stringify({ code: -3, msg: `请求异常：${err.message}` }) };
     }
 };
+
+function generateXhHash(params, hashkey) {
+    const sortedKeys = Object.keys(params).sort();
+    let arg = '';
+    sortedKeys.forEach(key => {
+        const val = params[key];
+        if (key !== 'hash' && val !== null && val !== undefined && val !== '') {
+            if (arg) arg += '&';
+            arg += `${key}=${val}`;
+        }
+    });
+    arg += hashkey;
+    return crypto.createHash('md5').update(arg).digest('hex').toLowerCase();
+}
+EOF
+
+echo ""
+echo "=== 文件已重新写入 ==="
+cat /Users/figowang/Desktop/PING/functions/create-order.js | grep "API_URL"
