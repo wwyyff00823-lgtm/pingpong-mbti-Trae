@@ -625,27 +625,34 @@
                 }).then(response => {
                     clearTimeout(timeout);
                     if (!response.ok) {
-                        throw new Error('HTTP error');
+                        throw new Error('HTTP error ' + response.status);
                     }
                     return response.json();
                 }).then(data => {
-                    console.log('Check order response:', data);
-                    if (data.paid) {
+                    console.log('=== Check Order Response ===');
+                    console.log('Full data:', JSON.stringify(data, null, 2));
+                    console.log('paid:', data.paid);
+                    console.log('status:', data.status);
+                    console.log('code:', data.code);
+                    
+                    if (data.paid === true || data.status === 'paid' || data.status === 'OD' || data.status === 'PAID' || data.status === 'TRADE_SUCCESS') {
                         resolve({
                             success: true,
                             orderNo,
                             status: 'paid',
                             amount: 9.9,
-                            verified: true
+                            verified: true,
+                            response: data
                         });
                     } else {
                         resolve({
                             success: true,
                             orderNo,
-                            status: 'pending',
+                            status: data.status || 'pending',
                             amount: 9.9,
                             verified: true,
-                            error: data.msg || '支付未完成'
+                            error: data.msg || data.message || '支付未完成',
+                            response: data
                         });
                     }
                 }).catch(error => {
@@ -655,7 +662,8 @@
                         success: false,
                         orderNo,
                         status: 'pending',
-                        message: '查询失败，请稍后重试'
+                        message: '查询失败，请稍后重试',
+                        error: error.message
                     });
                 });
             });
@@ -727,18 +735,28 @@
             async function checkPaymentWithFallback(orderNo) {
                 try {
                     const result = await checkOrder(orderNo);
-                    console.log('Check order result:', result);
+                    console.log('=== Payment Check Result ===');
+                    console.log('Full result:', JSON.stringify(result, null, 2));
+                    console.log('success:', result.success);
+                    console.log('status:', result.status);
+                    console.log('paid:', result.paid);
+                    console.log('verified:', result.verified);
                     
-                    // 只有虎皮椒接口确认支付成功才能解锁
-                    if (result.success && result.status === 'paid') {
-                        console.log('Payment confirmed by Xunhu');
-                        return { shouldUnlock: true, reason: 'server_confirmed' };
+                    // 检查多种支付成功的条件
+                    const isPaid = result.success && (result.status === 'paid' || result.paid === true || 
+                        result.status === 'OD' || result.status === 'PAID' || result.status === 'TRADE_SUCCESS');
+                    console.log('Is paid:', isPaid);
+                    
+                    if (isPaid) {
+                        console.log('Payment confirmed!');
+                        return { shouldUnlock: true, reason: 'server_confirmed', result: result };
+                    } else {
+                        console.log('Payment not confirmed:', result.msg || result.message || result.error);
                     }
                 } catch (error) {
                     console.error('Check order error:', error);
                 }
                 
-                // 未支付或支付未成功，绝不解锁报告
                 return { shouldUnlock: false };
             }
 

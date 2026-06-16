@@ -35,28 +35,38 @@ async function queryOrderFromXunhu(orderNo) {
         const hash = generateXhHash(params, APPSECRET);
         params.hash = hash;
         
-        const queryString = new URLSearchParams(params).toString();
-        const url = QUERY_URL + '?' + queryString;
+        const queryString = Object.keys(params).sort().map(key => {
+            return `${key}=${encodeURIComponent(params[key])}`;
+        }).join('&');
         
-        console.log('Query URL:', url);
+        console.log('=== Query Order ===');
+        console.log('Order No:', orderNo);
         console.log('Query params:', params);
+        console.log('Query string:', queryString);
         
-        const response = await fetch(url, {
+        const response = await fetch(QUERY_URL, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            headers: { 
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'Accept': 'application/json'
+            },
             body: queryString,
             timeout: 15000
         });
         
+        console.log('Response status:', response.status);
+        
         const text = await response.text();
-        console.log('Raw response:', text);
+        console.log('Raw response text:', text);
         
         try {
             const result = JSON.parse(text);
-            console.log('Parsed result:', JSON.stringify(result));
+            console.log('Parsed JSON:', JSON.stringify(result, null, 2));
+            console.log('Result keys:', Object.keys(result));
             return result;
         } catch (e) {
-            console.log('JSON parse error:', e);
+            console.log('JSON parse error:', e.message);
+            console.log('Raw response for debug:', text);
             return null;
         }
     } catch (error) {
@@ -85,7 +95,16 @@ exports.handler = async function(event, context) {
     try {
         body = JSON.parse(event.body || '{}');
     } catch (e) {
-        return { statusCode: 400, headers, body: JSON.stringify({ code: -1, msg: "Invalid JSON" }) };
+        console.log('Failed to parse JSON body, trying form data');
+        try {
+            const formData = new URLSearchParams(event.body || '');
+            body = {};
+            formData.forEach((value, key) => {
+                body[key] = value;
+            });
+        } catch (e2) {
+            return { statusCode: 400, headers, body: JSON.stringify({ code: -1, msg: "Invalid request body" }) };
+        }
     }
 
     const { order_no } = body;
@@ -95,30 +114,48 @@ exports.handler = async function(event, context) {
     }
 
     if (!order_no.startsWith('PING')) {
-        return { statusCode: 200, headers, body: JSON.stringify({ code: 0, paid: false, msg: "Invalid order" }) };
+        return { statusCode: 200, headers, body: JSON.stringify({ code: 0, paid: false, msg: "Invalid order prefix" }) };
     }
 
+    console.log('=== Payment Check Request ===');
+    console.log('Order No:', order_no);
+    console.log('Full body:', JSON.stringify(body));
+    
     const xunhuResult = await queryOrderFromXunhu(order_no);
     
     if (xunhuResult) {
-        console.log('Xunhu result:', JSON.stringify(xunhuResult));
+        console.log('=== Xunhu Response Analysis ===');
         
-        if (xunhuResult.errcode === 0) {
-            const status = xunhuResult.status;
-            console.log('Order status:', status);
+        const errcode = xunhuResult.errcode;
+        const status = xunhuResult.status || xunhuResult.trade_status || xunhuResult.order_status;
+        const tradeStatus = xunhuResult.trade_status;
+        
+        console.log('errcode:', errcode, '(type:', typeof errcode, ')');
+        console.log('status:', status, '(type:', typeof status, ')');
+        console.log('trade_status:', tradeStatus);
+        console.log('All fields:', Object.keys(xunhuResult).join(', '));
+        console.log('Full response:', JSON.stringify(xunhuResult, null, 2));
+        
+        const isSuccessCode = errcode === 0 || errcode === '0' || errcode === undefined;
+        
+        if (isSuccessCode) {
+            const validPaidStatuses = ['OD', 'PAID', 'TRADE_SUCCESS', 'trade_success', 'SUCCESS'];
+            const isPaid = validPaidStatuses.includes(status) || validPaidStatuses.includes(tradeStatus);
             
-            if (status === 'OD') {
+            if (isPaid) {
+                console.log('Payment confirmed - status:', status, '/ trade_status:', tradeStatus);
                 return { 
                     statusCode: 200, 
                     headers, 
                     body: JSON.stringify({ 
                         code: 0, 
                         paid: true, 
-                        status: status,
+                        status: status || tradeStatus,
                         msg: "Payment confirmed" 
                     }) 
                 };
-            } else {
+            } else if (status === '0' || status === '1' || status === 'PENDING' || status === 'pending') {
+                console.log('Payment pending - status:', status);
                 return { 
                     statusCode: 200, 
                     headers, 
@@ -126,42 +163,88 @@ exports.handler = async function(event, context) {
                         code: 0, 
                         paid: false, 
                         status: status,
-                        msg: "Order not paid yet" 
+                        msg: "Order pending" 
+                    }) 
+                };
+            } else {
+                console.log('Unknown status:', status);
+                return { 
+                    statusCode: 200, 
+                    headers, 
+                    body: JSON.stringify({ 
+                        code: 0, 
+                        paid: false, 
+                        status: status,
+                        msg: `Unknown status: ${status}` 
                     }) 
                 };
             }
         } else {
-            console.log('Xunhu error:', xunhuResult.errmsg);
+            const errmsg = xunhuResult.errmsg || xunhuResult.message || 'Unknown error';
+            console.log('Xunhu API error:', errmsg, 'errcode:', errcode);
+            
+            if (errmsg.includes('order not found') || errmsg.includes('订单不存在')) {
+                console.log('Order not found in Xunhu, checking order age');
+                const orderTimeStr = order_no.replace('PING', '').substring(0, 13);
+                const orderTimestamp = parseInt(orderTimeStr + '000') || 0;
+                const elapsed = Date.now() - orderTimestamp;
+                
+                if (elapsed > 30 * 60 * 1000) {
+                    console.log('Order older than 30 minutes, marking as expired');
+                    return { 
+                        statusCode: 200, 
+                        headers, 
+                        body: JSON.stringify({ 
+                            code: 0, 
+                            paid: false, 
+                            msg: "Order expired" 
+                        }) 
+                    };
+                }
+            }
+            
+            return { 
+                statusCode: 200, 
+                headers, 
+                body: JSON.stringify({ 
+                    code: errcode, 
+                    paid: false, 
+                    msg: errmsg 
+                }) 
+            };
         }
     } else {
-        console.log('Failed to query Xunhu');
-    }
-
-    const orderTimeStr = order_no.replace('PING', '').substring(0, 13);
-    const orderTimestamp = parseInt(orderTimeStr + '000') || 0;
-    const elapsed = Date.now() - orderTimestamp;
-    
-    if (elapsed > 5 * 60 * 1000) {
-        console.log('Order older than 5 minutes, auto-confirming');
+        console.log('Failed to query Xunhu API - result is null');
+        
+        const orderTimeStr = order_no.replace('PING', '').substring(0, 13);
+        const orderTimestamp = parseInt(orderTimeStr + '000') || 0;
+        const elapsed = Date.now() - orderTimestamp;
+        
+        console.log('Order created:', new Date(orderTimestamp));
+        console.log('Elapsed:', elapsed, 'ms');
+        
+        if (elapsed > 30 * 60 * 1000) {
+            console.log('Order older than 30 minutes, marking as expired');
+            return { 
+                statusCode: 200, 
+                headers, 
+                body: JSON.stringify({ 
+                    code: 0, 
+                    paid: false, 
+                    msg: "Order expired" 
+                }) 
+            };
+        }
+        
         return { 
             statusCode: 200, 
             headers, 
             body: JSON.stringify({ 
                 code: 0, 
-                paid: true, 
-                msg: "Payment confirmed (timeout)" 
+                paid: false, 
+                pending: true,
+                msg: "Order pending" 
             }) 
         };
     }
-    
-    return { 
-        statusCode: 200, 
-        headers, 
-        body: JSON.stringify({ 
-            code: 0, 
-            paid: false, 
-            pending: true,
-            msg: "Order pending" 
-        }) 
-    };
 };

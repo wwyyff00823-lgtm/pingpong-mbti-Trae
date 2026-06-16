@@ -1,9 +1,39 @@
 const crypto = require('crypto');
-const qs = require('querystring');
 
+const APPID = "201906181673";
 const APPSECRET = "685ed8bb1d5468e8771aaee1109913c4";
 
+const paidOrders = new Set();
+
 function generateXhHash(params, hashkey) {
+    const sortedKeys = Object.keys(params).sort();
+    let arg = '';
+    sortedKeys.forEach(key => {
+        const val = params[key];
+        if (key === 'hash' || val === null || val === undefined || val === '' || val === 'undefined') {
+            return;
+        }
+        if (arg) arg += '&';
+        arg += key + '=' + val;
+    });
+    arg += hashkey;
+    return crypto.createHash('md5').update(arg).digest('hex').toLowerCase();
+}
+
+function isOrderPaid(orderNo) {
+    return paidOrders.has(orderNo);
+}
+
+function markOrderPaid(orderNo) {
+    paidOrders.add(orderNo);
+    setTimeout(() => {
+        paidOrders.delete(orderNo);
+    }, 24 * 60 * 60 * 1000);
+}
+
+exports.isOrderPaid = isOrderPaid;
+
+function verifyHash(params, hashkey, expectedHash) {
     const sortedKeys = Object.keys(params).sort();
     let arg = '';
     sortedKeys.forEach(key => {
@@ -15,111 +45,122 @@ function generateXhHash(params, hashkey) {
         arg += key + '=' + val;
     });
     arg += hashkey;
-    return crypto.createHash('md5').update(arg).digest('hex').toLowerCase();
+    const calculatedHash = crypto.createHash('md5').update(arg).digest('hex').toLowerCase();
+    return calculatedHash === expectedHash.toLowerCase();
 }
 
 exports.handler = async function(event, context) {
-    const headers = {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type',
-        'Access-Control-Allow-Methods': 'POST, OPTIONS',
-        'Content-Type': 'text/plain'
-    };
-
-    if (event.httpMethod === 'OPTIONS') {
-        return { statusCode: 200, headers, body: 'ok' };
-    }
-
-    if (event.httpMethod !== 'POST') {
-        console.log('Invalid method:', event.httpMethod);
-        return { statusCode: 200, headers, body: "fail" };
-    }
-
-    const rawBody = event.body || '';
-    console.log('Raw body:', rawBody);
-    
-    const contentType = event.headers['content-type'] || event.headers['Content-Type'] || '';
-    console.log('Content-Type:', contentType);
+    console.log('=== Notify Request Received ===');
+    console.log('HTTP Method:', event.httpMethod);
+    console.log('Headers:', JSON.stringify(event.headers));
     
     let body = {};
-    if (contentType.includes('application/json')) {
-        try {
-            body = JSON.parse(rawBody);
-        } catch (e) {
-            console.log('JSON parse error:', e);
-            return { statusCode: 200, headers, body: "fail" };
-        }
-    } else {
-        body = qs.parse(rawBody);
-    }
-
-    console.log('Parsed body:', JSON.stringify(body));
-
-    const { trade_order_id, status, hash } = body;
     
-    if (!trade_order_id) {
-        console.log('Missing trade_order_id');
-        return { statusCode: 200, headers, body: "fail" };
-    }
-
-    if (!status) {
-        console.log('Missing status');
-        return { statusCode: 200, headers, body: "fail" };
-    }
-
-    if (!hash) {
-        console.log('Missing hash');
-        return { statusCode: 200, headers, body: "fail" };
-    }
-
-    const paramsForHash = {};
-    Object.keys(body).forEach(key => {
-        if (key !== 'hash') {
-            paramsForHash[key] = body[key];
-        }
-    });
-    
-    const calcHash = generateXhHash(paramsForHash, APPSECRET);
-
-    console.log('Hash verification:');
-    console.log('  Calculated:', calcHash);
-    console.log('  Received:', hash);
-
-    if (calcHash !== hash) {
-        console.log('Hash verification FAILED');
-        console.log('Trying with decoded values...');
-        
-        const decodedParams = {};
-        Object.keys(body).forEach(key => {
-            if (key !== 'hash') {
+    if (event.httpMethod === 'POST') {
+        if (event.body) {
+            if (event.headers['content-type'] && event.headers['content-type'].includes('application/json')) {
                 try {
-                    decodedParams[key] = decodeURIComponent(body[key]);
+                    body = JSON.parse(event.body);
+                    console.log('Parsed JSON body:', JSON.stringify(body, null, 2));
                 } catch (e) {
-                    decodedParams[key] = body[key];
+                    console.log('Failed to parse JSON:', e.message);
                 }
+            } else if (event.headers['content-type'] && event.headers['content-type'].includes('form')) {
+                const formData = new URLSearchParams(event.body);
+                formData.forEach((value, key) => {
+                    body[key] = value;
+                });
+                console.log('Parsed form body:', JSON.stringify(body, null, 2));
+            } else {
+                try {
+                    body = JSON.parse(event.body);
+                } catch (e) {
+                    const formData = new URLSearchParams(event.body);
+                    formData.forEach((value, key) => {
+                        body[key] = value;
+                    });
+                }
+                console.log('Parsed body:', JSON.stringify(body, null, 2));
+            }
+        }
+    }
+    
+    const { trade_order_id, total_fee, status, hash, transaction_id, open_order_id, order_title, nonce_str, time, appid } = body;
+    
+    console.log('=== Notify Parameters ===');
+    console.log('trade_order_id:', trade_order_id);
+    console.log('total_fee:', total_fee);
+    console.log('status:', status);
+    console.log('hash:', hash);
+    console.log('transaction_id:', transaction_id);
+    console.log('open_order_id:', open_order_id);
+    console.log('order_title:', order_title);
+    console.log('nonce_str:', nonce_str);
+    console.log('time:', time);
+    console.log('appid:', appid);
+    
+    if (!trade_order_id || !status || !hash) {
+        console.log('Missing required parameters');
+        return { statusCode: 200, body: 'fail' };
+    }
+    
+    const paramsForSign = { ...body };
+    delete paramsForSign.hash;
+    
+    console.log('=== Signature Verification ===');
+    console.log('Parameters for sign:', JSON.stringify(paramsForSign));
+    
+    const calculatedHash = generateXhHash(paramsForSign, APPSECRET);
+    console.log('Calculated hash:', calculatedHash);
+    console.log('Received hash:', hash);
+    
+    const isVerified = calculatedHash === hash.toLowerCase();
+    console.log('Signature verified:', isVerified);
+    
+    if (!isVerified) {
+        const paramsDecoded = { ...paramsForSign };
+        Object.keys(paramsDecoded).forEach(key => {
+            if (typeof paramsDecoded[key] === 'string') {
+                try {
+                    paramsDecoded[key] = decodeURIComponent(paramsDecoded[key]);
+                } catch (e) {}
             }
         });
-        const decodedHash = generateXhHash(decodedParams, APPSECRET);
-        console.log('  Decoded hash:', decodedHash);
+        const calculatedHashDecoded = generateXhHash(paramsDecoded, APPSECRET);
+        console.log('Calculated hash (decoded):', calculatedHashDecoded);
         
-        if (decodedHash === hash) {
-            console.log('Hash verified with decoded values');
-        } else {
-            console.log('Hash verification FAILED with both methods');
-            return { statusCode: 200, headers, body: "fail" };
+        if (calculatedHashDecoded === hash.toLowerCase()) {
+            console.log('Signature verified with decoded params');
+            isVerified = true;
         }
+    }
+    
+    if (!isVerified) {
+        console.log('Signature verification failed');
+        console.log('Invalid hash - returning fail to trigger retry');
+        return { statusCode: 200, body: 'fail' };
+    }
+    
+    if (status === 'OD') {
+        console.log('Payment successful for order:', trade_order_id);
+        console.log('Transaction ID:', transaction_id);
+        console.log('Amount:', total_fee);
+        
+        markOrderPaid(trade_order_id);
+        
+        const successData = {
+            trade_order_id,
+            total_fee,
+            status: 'paid',
+            transaction_id,
+            open_order_id,
+            updated_at: new Date().toISOString()
+        };
+        
+        console.log('Order marked as paid:', JSON.stringify(successData));
     } else {
-        console.log('Hash verification PASSED');
+        console.log('Order status:', status);
     }
-
-    if (status !== 'OD') {
-        console.log('Invalid status:', status);
-        return { statusCode: 200, headers, body: "success" };
-    }
-
-    console.log('Payment SUCCESS for order:', trade_order_id);
-    console.log('Transaction ID:', body.transaction_id);
-    console.log('Total fee:', body.total_fee);
-
-    return { statusCode: 200, headers, body: "success" };
+    
+    return { statusCode: 200, body: 'success' };
 };
