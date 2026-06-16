@@ -606,138 +606,59 @@
             }
         }
 
-        function generateXhHash(params, hashkey) {
-            const sortedKeys = Object.keys(params).sort();
-            let arg = '';
-            sortedKeys.forEach(key => {
-                const val = params[key];
-                if (key === 'hash' || val === null || val === undefined || val === '') {
-                    return;
-                }
-                if (arg) arg += '&';
-                arg += key + '=' + val;
-            });
-            arg += hashkey;
-            return md5(arg);
-        }
-
-        function md5(str) {
-            const hash = crypto.subtle.digest('MD5', new TextEncoder().encode(str));
-            return new Promise(resolve => {
-                hash.then(buffer => {
-                    const hex = Array.from(new Uint8Array(buffer)).map(b => b.toString(16).padStart(2, '0')).join('');
-                    resolve(hex.toLowerCase());
-                });
-            });
-        }
-
         async function checkOrder(orderNo) {
-            const APPID = "201906181673";
-            const APPSECRET = "685ed8bb1d5468e8771aaee1109913c4";
-            const QUERY_URL = "https://api.xunhupay.com/payment/query.html";
-            
-            try {
-                const time = Math.floor(Date.now() / 1000);
-                const nonce_str = Array.from(crypto.getRandomValues(new Uint8Array(16))).map(b => b.toString(16).padStart(2, '0')).join('');
+            return new Promise((resolve, reject) => {
+                const timeout = setTimeout(() => {
+                    console.log('Check order timeout');
+                    resolve({
+                        success: false,
+                        orderNo,
+                        status: 'pending',
+                        message: '请求超时'
+                    });
+                }, 15000);
                 
-                const params = {
-                    version: "1.1",
-                    appid: APPID,
-                    trade_order_id: orderNo,
-                    time: time,
-                    nonce_str: nonce_str
-                };
-                
-                const hash = await generateXhHash(params, APPSECRET);
-                params.hash = hash;
-                
-                const queryString = Object.keys(params).sort().map(key => {
-                    return `${key}=${encodeURIComponent(params[key])}`;
-                }).join('&');
-                
-                console.log('Query params:', params);
-                console.log('Query string:', queryString);
-                
-                const response = await fetch(QUERY_URL, {
+                fetch('/.netlify/functions/check-order', {
                     method: 'POST',
-                    headers: { 
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                        'Accept': 'application/json'
-                    },
-                    body: queryString,
-                    mode: 'no-cors'
-                });
-                
-                if (response.type === 'opaque') {
-                    console.log('CORS blocked, trying proxy');
-                    return await checkOrderViaProxy(orderNo);
-                }
-                
-                const text = await response.text();
-                console.log('Xunhu query response:', text);
-                
-                try {
-                    const data = JSON.parse(text);
-                    console.log('Parsed data:', data);
-                    
-                    if (data.errcode === 0 && data.status === 'OD') {
-                        return {
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ order_no: orderNo })
+                }).then(response => {
+                    clearTimeout(timeout);
+                    if (!response.ok) {
+                        throw new Error('HTTP error');
+                    }
+                    return response.json();
+                }).then(data => {
+                    console.log('Check order response:', data);
+                    if (data.paid) {
+                        resolve({
                             success: true,
                             orderNo,
                             status: 'paid',
                             amount: 9.9,
                             verified: true
-                        };
+                        });
                     } else {
-                        return {
+                        resolve({
                             success: true,
                             orderNo,
                             status: 'pending',
                             amount: 9.9,
                             verified: true,
-                            error: data.errmsg || 'Not paid',
-                            rawStatus: data.status
-                        };
+                            error: data.msg || '支付未完成'
+                        });
                     }
-                } catch (e) {
-                    console.log('JSON parse error:', e);
-                    return {
+                }).catch(error => {
+                    clearTimeout(timeout);
+                    console.error('Check order error:', error);
+                    resolve({
                         success: false,
                         orderNo,
                         status: 'pending',
-                        message: 'Invalid response'
-                    };
-                }
-            } catch (error) {
-                console.error('Check order error:', error);
-                return await checkOrderViaProxy(orderNo);
-            }
-        }
-        
-        async function checkOrderViaProxy(orderNo) {
-            try {
-                const response = await fetch('/.netlify/functions/check-order', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ order_no: orderNo })
+                        message: '查询失败，请稍后重试'
+                    });
                 });
-                const data = await response.json();
-                return {
-                    success: true,
-                    orderNo,
-                    status: data.paid ? 'paid' : 'pending',
-                    amount: 9.9,
-                    verified: true
-                };
-            } catch (error) {
-                console.error('Proxy check error:', error);
-                return {
-                    success: false,
-                    orderNo,
-                    status: 'pending',
-                    message: 'Proxy failed'
-                };
-            }
+            });
         }
 
         document.addEventListener('DOMContentLoaded', () => {
@@ -773,20 +694,17 @@
                 }
             }
 
-            function savePaymentConfirmed(orderNo) {
-                localStorage.setItem('payment_confirmed_' + orderNo, 'true');
-                localStorage.setItem('payment_confirmed_time', Date.now().toString());
+            function savePaymentConfirmed() {
+                localStorage.setItem('mbti_paid_' + mbtiType + '_' + userLevel, 'true');
+                localStorage.setItem('mbti_paid_time', Date.now().toString());
                 localStorage.setItem('lastPaidResult', mbtiType);
+                localStorage.setItem('lastPaidLevel', userLevel);
             }
 
-            function isPaymentConfirmed(orderNo) {
-                const confirmed = localStorage.getItem('payment_confirmed_' + orderNo);
-                const confirmedTime = localStorage.getItem('payment_confirmed_time');
-                if (confirmed === 'true' && confirmedTime) {
-                    const elapsed = Date.now() - parseInt(confirmedTime);
-                    if (elapsed < 24 * 60 * 60 * 1000) {
-                        return true;
-                    }
+            function isPaymentConfirmed() {
+                const paid = localStorage.getItem('mbti_paid_' + mbtiType + '_' + userLevel);
+                if (paid === 'true') {
+                    return true;
                 }
                 return false;
             }
@@ -795,9 +713,15 @@
                 stopPolling();
                 paymentModal.classList.remove('show');
                 checkingModal.classList.remove('show');
-                renderReport(userLevel);
-                savePaymentConfirmed(currentOrderNo);
+                document.getElementById('unlockSection').style.display = 'none';
+                document.getElementById('reportSection').classList.add('show');
+                savePaymentConfirmed();
                 showToast('支付成功！');
+            }
+
+            if (isPaymentConfirmed()) {
+                unlockReport();
+                return;
             }
 
             async function checkPaymentWithFallback(orderNo) {
@@ -826,8 +750,8 @@
                     orderNo.textContent = currentOrderNo;
                     modalOpenedAt = Date.now();
                     
-                    // 检查是否已经确认过这个订单
-                    if (isPaymentConfirmed(currentOrderNo)) {
+                    // 检查是否已经确认过支付
+                    if (isPaymentConfirmed()) {
                         unlockReport();
                         return;
                     }
