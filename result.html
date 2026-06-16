@@ -580,6 +580,7 @@
                     return {
                         success: true,
                         orderNo: data.order_no,
+                        openOrderId: data.open_order_id || '',
                         qrCodeUrl: payUrl || data.pay_url,
                         payUrl: data.url,
                         isMobile: isMobileDevice,
@@ -598,6 +599,7 @@
                 return {
                     success: true,
                     orderNo: orderNo,
+                    openOrderId: '',
                     qrCodeUrl: fallbackUrl,
                     isMobile: isMobileDevice,
                     expiresAt: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
@@ -606,7 +608,7 @@
             }
         }
 
-        async function checkOrder(orderNo) {
+        async function checkOrder(orderNo, openOrderId = '') {
             return new Promise((resolve, reject) => {
                 const timeout = setTimeout(() => {
                     console.log('Check order timeout');
@@ -621,7 +623,7 @@
                 fetch('/.netlify/functions/check-order', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ order_no: orderNo })
+                    body: JSON.stringify({ order_no: orderNo, open_order_id: openOrderId })
                 }).then(response => {
                     clearTimeout(timeout);
                     if (!response.ok) {
@@ -691,6 +693,7 @@
             const cancelPaymentBtn = document.getElementById('cancelPaymentBtn');
 
             let currentOrderNo = '';
+            let currentOpenOrderId = '';
             let pollInterval = null;
             let currentPayUrl = '';
             let modalOpenedAt = 0;
@@ -732,9 +735,9 @@
                 return;
             }
 
-            async function checkPaymentWithFallback(orderNo) {
+            async function checkPaymentWithFallback(orderNo, openOrderId = '') {
                 try {
-                    const result = await checkOrder(orderNo);
+                    const result = await checkOrder(orderNo, openOrderId);
                     console.log('=== Payment Check Result ===');
                     console.log('Full result:', JSON.stringify(result, null, 2));
                     console.log('success:', result.success);
@@ -764,6 +767,7 @@
                 const order = await createOrder();
                 if (order.success) {
                     currentOrderNo = order.orderNo;
+                    currentOpenOrderId = order.openOrderId || '';
                     currentPayUrl = order.payUrl;
                     orderNo.textContent = currentOrderNo;
                     modalOpenedAt = Date.now();
@@ -791,7 +795,7 @@
                     }
                     
                     paymentModal.classList.add('show');
-                    startPolling(currentOrderNo);
+                    startPolling(currentOrderNo, currentOpenOrderId);
                 } else {
                     showToast(order.message || '创建订单失败，请重试');
                 }
@@ -801,7 +805,7 @@
                 paymentModal.classList.remove('show');
                 checkingModal.classList.add('show');
 
-                const checkResult = await checkPaymentWithFallback(currentOrderNo);
+                const checkResult = await checkPaymentWithFallback(currentOrderNo, currentOpenOrderId);
                 console.log('Payment check result:', checkResult);
                 
                 if (checkResult.shouldUnlock) {
@@ -828,10 +832,10 @@
                 window.location.href = 'index.html';
             });
 
-            async function startPolling(orderNo) {
+            async function startPolling(orderNo, openOrderId = '') {
                 stopPolling();
                 pollInterval = setInterval(async () => {
-                    const checkResult = await checkPaymentWithFallback(orderNo);
+                    const checkResult = await checkPaymentWithFallback(orderNo, openOrderId);
                     if (checkResult.shouldUnlock) {
                         unlockReport();
                     }

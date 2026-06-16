@@ -116,7 +116,8 @@ exports.handler = async function(event, context) {
                 url_qrcode: ret.url_qrcode,
                 url: ret.url,
                 pay_url: ret.url_qrcode || ret.url, 
-                order_no: order_no 
+                order_no: order_no,
+                open_order_id: ret.open_order_id || ret.openid || ''
             }) };
         } else {
             return { statusCode: 200, headers, body: JSON.stringify({ code: -2, msg: 'No payment URL returned' }) };

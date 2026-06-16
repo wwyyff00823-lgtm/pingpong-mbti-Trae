@@ -19,7 +19,7 @@ function generateXhHash(params, hashkey) {
     return crypto.createHash('md5').update(arg).digest('hex').toLowerCase();
 }
 
-async function queryOrderFromXunhu(orderNo) {
+async function queryOrderFromXunhu(orderNo, openOrderId = '') {
     try {
         const time = Math.floor(Date.now() / 1000);
         const nonce_str = crypto.randomBytes(16).toString('hex');
@@ -27,10 +27,15 @@ async function queryOrderFromXunhu(orderNo) {
         const params = {
             version: "1.1",
             appid: APPID,
-            trade_order_id: orderNo,
             time: time,
             nonce_str: nonce_str
         };
+        
+        if (openOrderId) {
+            params.open_order_id = openOrderId;
+        } else {
+            params.trade_order_id = orderNo;
+        }
         
         const hash = generateXhHash(params, APPSECRET);
         params.hash = hash;
@@ -41,6 +46,7 @@ async function queryOrderFromXunhu(orderNo) {
         
         console.log('=== Query Order ===');
         console.log('Order No:', orderNo);
+        console.log('Open Order ID:', openOrderId);
         console.log('Query params:', params);
         console.log('Query string:', queryString);
         
@@ -107,7 +113,7 @@ exports.handler = async function(event, context) {
         }
     }
 
-    const { order_no } = body;
+    const { order_no, open_order_id } = body;
     
     if (!order_no) {
         return { statusCode: 400, headers, body: JSON.stringify({ code: -1, msg: "Missing order_no" }) };
@@ -119,9 +125,10 @@ exports.handler = async function(event, context) {
 
     console.log('=== Payment Check Request ===');
     console.log('Order No:', order_no);
+    console.log('Open Order ID:', open_order_id);
     console.log('Full body:', JSON.stringify(body));
     
-    const xunhuResult = await queryOrderFromXunhu(order_no);
+    const xunhuResult = await queryOrderFromXunhu(order_no, open_order_id);
     
     if (xunhuResult) {
         console.log('=== Xunhu Response Analysis ===');
