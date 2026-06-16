@@ -30,13 +30,13 @@ async function queryOrderFromXunhu(orderNo, openOrderId = '') {
             time: time,
             nonce_str: nonce_str
         };
-        
+
         if (openOrderId) {
             params.open_order_id = openOrderId;
         } else {
-            params.trade_order_id = orderNo;
+            params.out_trade_order = orderNo;
         }
-        
+
         const hash = generateXhHash(params, APPSECRET);
         params.hash = hash;
         
