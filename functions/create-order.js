@@ -106,9 +106,15 @@ exports.handler = async function(event, context) {
             return { statusCode: 200, headers, body: JSON.stringify({ code: -2, msg: 'Invalid response format' }) };
         }
 
+        console.log('Full response object:', JSON.stringify(ret, null, 2));
+        console.log('Response keys:', Object.keys(ret));
+
         if (ret.errcode && ret.errcode !== 0) {
             return { statusCode: 200, headers, body: JSON.stringify({ code: -2, msg: ret.errmsg || 'Payment API error' }) };
         }
+
+        const openOrderId = ret.open_order_id || ret.order_id || ret.id || ret.openid || '';
+        console.log('Open Order ID found:', openOrderId);
 
         if (ret.url_qrcode || ret.url) {
             return { statusCode: 200, headers, body: JSON.stringify({ 
@@ -117,7 +123,7 @@ exports.handler = async function(event, context) {
                 url: ret.url,
                 pay_url: ret.url_qrcode || ret.url, 
                 order_no: order_no,
-                open_order_id: ret.open_order_id || ret.openid || ''
+                open_order_id: openOrderId
             }) };
         } else {
             return { statusCode: 200, headers, body: JSON.stringify({ code: -2, msg: 'No payment URL returned' }) };
