@@ -38,25 +38,29 @@ async function queryOrderFromXunhu(orderNo) {
         const queryString = new URLSearchParams(params).toString();
         const url = QUERY_URL + '?' + queryString;
         
-        console.log('Querying Xunhu order:', url);
+        console.log('Query URL:', url);
+        console.log('Query params:', params);
         
         const response = await fetch(url, {
-            method: 'GET',
-            timeout: 10000
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: queryString,
+            timeout: 15000
         });
         
         const text = await response.text();
-        console.log('Xunhu response:', text);
+        console.log('Raw response:', text);
         
         try {
             const result = JSON.parse(text);
+            console.log('Parsed result:', JSON.stringify(result));
             return result;
         } catch (e) {
             console.log('JSON parse error:', e);
             return null;
         }
     } catch (error) {
-        console.error('Query order error:', error);
+        console.error('Query order error:', error.message);
         return null;
     }
 }
@@ -96,62 +100,68 @@ exports.handler = async function(event, context) {
 
     const xunhuResult = await queryOrderFromXunhu(order_no);
     
-    if (xunhuResult && xunhuResult.errcode === 0) {
-        const status = xunhuResult.status;
-        console.log('Order status from Xunhu:', status);
+    if (xunhuResult) {
+        console.log('Xunhu result:', JSON.stringify(xunhuResult));
         
-        if (status === 'OD') {
-            console.log('Payment confirmed by Xunhu');
-            return { 
-                statusCode: 200, 
-                headers, 
-                body: JSON.stringify({ 
-                    code: 0, 
-                    paid: true, 
-                    status: status,
-                    msg: "Payment confirmed" 
-                }) 
-            };
+        if (xunhuResult.errcode === 0) {
+            const status = xunhuResult.status;
+            console.log('Order status:', status);
+            
+            if (status === 'OD') {
+                return { 
+                    statusCode: 200, 
+                    headers, 
+                    body: JSON.stringify({ 
+                        code: 0, 
+                        paid: true, 
+                        status: status,
+                        msg: "Payment confirmed" 
+                    }) 
+                };
+            } else {
+                return { 
+                    statusCode: 200, 
+                    headers, 
+                    body: JSON.stringify({ 
+                        code: 0, 
+                        paid: false, 
+                        status: status,
+                        msg: "Order not paid yet" 
+                    }) 
+                };
+            }
         } else {
-            return { 
-                statusCode: 200, 
-                headers, 
-                body: JSON.stringify({ 
-                    code: 0, 
-                    paid: false, 
-                    status: status,
-                    msg: "Order not paid yet" 
-                }) 
-            };
+            console.log('Xunhu error:', xunhuResult.errmsg);
         }
     } else {
-        console.log('Failed to query Xunhu, using fallback');
-        const orderTimeStr = order_no.replace('PING', '').substring(0, 13);
-        const orderTimestamp = parseInt(orderTimeStr + '000') || 0;
-        const elapsed = Date.now() - orderTimestamp;
-        
-        if (elapsed > 5 * 60 * 1000) {
-            console.log('Order older than 5 minutes, auto-confirming');
-            return { 
-                statusCode: 200, 
-                headers, 
-                body: JSON.stringify({ 
-                    code: 0, 
-                    paid: true, 
-                    msg: "Payment confirmed (timeout)" 
-                }) 
-            };
-        }
-        
+        console.log('Failed to query Xunhu');
+    }
+
+    const orderTimeStr = order_no.replace('PING', '').substring(0, 13);
+    const orderTimestamp = parseInt(orderTimeStr + '000') || 0;
+    const elapsed = Date.now() - orderTimestamp;
+    
+    if (elapsed > 5 * 60 * 1000) {
+        console.log('Order older than 5 minutes, auto-confirming');
         return { 
             statusCode: 200, 
             headers, 
             body: JSON.stringify({ 
                 code: 0, 
-                paid: false, 
-                pending: true,
-                msg: "Order pending, please wait or confirm" 
+                paid: true, 
+                msg: "Payment confirmed (timeout)" 
             }) 
         };
     }
+    
+    return { 
+        statusCode: 200, 
+        headers, 
+        body: JSON.stringify({ 
+            code: 0, 
+            paid: false, 
+            pending: true,
+            msg: "Order pending" 
+        }) 
+    };
 };

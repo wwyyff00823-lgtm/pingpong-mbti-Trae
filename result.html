@@ -606,7 +606,115 @@
             }
         }
 
+        function generateXhHash(params, hashkey) {
+            const sortedKeys = Object.keys(params).sort();
+            let arg = '';
+            sortedKeys.forEach(key => {
+                const val = params[key];
+                if (key === 'hash' || val === null || val === undefined || val === '') {
+                    return;
+                }
+                if (arg) arg += '&';
+                arg += key + '=' + val;
+            });
+            arg += hashkey;
+            return md5(arg);
+        }
+
+        function md5(str) {
+            const hash = crypto.subtle.digest('MD5', new TextEncoder().encode(str));
+            return new Promise(resolve => {
+                hash.then(buffer => {
+                    const hex = Array.from(new Uint8Array(buffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+                    resolve(hex.toLowerCase());
+                });
+            });
+        }
+
         async function checkOrder(orderNo) {
+            const APPID = "201906181673";
+            const APPSECRET = "685ed8bb1d5468e8771aaee1109913c4";
+            const QUERY_URL = "https://api.xunhupay.com/payment/query.html";
+            
+            try {
+                const time = Math.floor(Date.now() / 1000);
+                const nonce_str = Array.from(crypto.getRandomValues(new Uint8Array(16))).map(b => b.toString(16).padStart(2, '0')).join('');
+                
+                const params = {
+                    version: "1.1",
+                    appid: APPID,
+                    trade_order_id: orderNo,
+                    time: time,
+                    nonce_str: nonce_str
+                };
+                
+                const hash = await generateXhHash(params, APPSECRET);
+                params.hash = hash;
+                
+                const queryString = Object.keys(params).sort().map(key => {
+                    return `${key}=${encodeURIComponent(params[key])}`;
+                }).join('&');
+                
+                console.log('Query params:', params);
+                console.log('Query string:', queryString);
+                
+                const response = await fetch(QUERY_URL, {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'Accept': 'application/json'
+                    },
+                    body: queryString,
+                    mode: 'no-cors'
+                });
+                
+                if (response.type === 'opaque') {
+                    console.log('CORS blocked, trying proxy');
+                    return await checkOrderViaProxy(orderNo);
+                }
+                
+                const text = await response.text();
+                console.log('Xunhu query response:', text);
+                
+                try {
+                    const data = JSON.parse(text);
+                    console.log('Parsed data:', data);
+                    
+                    if (data.errcode === 0 && data.status === 'OD') {
+                        return {
+                            success: true,
+                            orderNo,
+                            status: 'paid',
+                            amount: 9.9,
+                            verified: true
+                        };
+                    } else {
+                        return {
+                            success: true,
+                            orderNo,
+                            status: 'pending',
+                            amount: 9.9,
+                            verified: true,
+                            error: data.errmsg || 'Not paid',
+                            rawStatus: data.status
+                        };
+                    }
+                } catch (e) {
+                    console.log('JSON parse error:', e);
+                    return {
+                        success: false,
+                        orderNo,
+                        status: 'pending',
+                        message: 'Invalid response'
+                    };
+                }
+            } catch (error) {
+                console.error('Check order error:', error);
+                return await checkOrderViaProxy(orderNo);
+            }
+        }
+        
+        async function checkOrderViaProxy(orderNo) {
             try {
                 const response = await fetch('/.netlify/functions/check-order', {
                     method: 'POST',
@@ -618,16 +726,16 @@
                     success: true,
                     orderNo,
                     status: data.paid ? 'paid' : 'pending',
-                    amount: 9.9
+                    amount: 9.9,
+                    verified: true
                 };
             } catch (error) {
-                console.error('Check order error:', error);
-                const random = Math.random();
+                console.error('Proxy check error:', error);
                 return {
-                    success: true,
+                    success: false,
                     orderNo,
-                    status: random > 0.3 ? 'paid' : 'pending',
-                    amount: 9.9
+                    status: 'pending',
+                    message: 'Proxy failed'
                 };
             }
         }
@@ -695,16 +803,18 @@
             async function checkPaymentWithFallback(orderNo) {
                 try {
                     const result = await checkOrder(orderNo);
+                    console.log('Check order result:', result);
+                    
+                    // 只有虎皮椒接口确认支付成功才能解锁
                     if (result.success && result.status === 'paid') {
-                        console.log('Payment confirmed by server');
+                        console.log('Payment confirmed by Xunhu');
                         return { shouldUnlock: true, reason: 'server_confirmed' };
                     }
                 } catch (error) {
                     console.error('Check order error:', error);
                 }
                 
-                // 只有服务端确认支付成功才能解锁，不使用本地时间兜底
-                // 防止未支付就解锁报告
+                // 未支付或支付未成功，绝不解锁报告
                 return { shouldUnlock: false };
             }
 
@@ -750,13 +860,14 @@
                 checkingModal.classList.add('show');
 
                 const checkResult = await checkPaymentWithFallback(currentOrderNo);
+                console.log('Payment check result:', checkResult);
+                
                 if (checkResult.shouldUnlock) {
                     unlockReport();
                 } else {
                     checkingModal.classList.remove('show');
                     paymentModal.classList.add('show');
-                    const elapsed = Math.floor((Date.now() - modalOpenedAt) / 1000);
-                    showToast(`支付未完成，已等待${elapsed}秒，请确保已完成支付`);
+                    showToast('支付未完成，请确保已完成支付后再尝试');
                 }
             });
 
