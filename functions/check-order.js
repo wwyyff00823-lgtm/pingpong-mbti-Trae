@@ -6,17 +6,30 @@ const QUERY_URL = "https://api.xunhupay.com/payment/query.html";
 
 function generateXhHash(params, hashkey) {
     const sortedKeys = Object.keys(params).sort();
+    console.log('=== Hash Generation Debug ===');
+    console.log('Original params:', JSON.stringify(params));
+    console.log('Sorted keys:', sortedKeys);
+    
     let arg = '';
     sortedKeys.forEach(key => {
         const val = params[key];
-        if (key === 'hash' || val === null || val === undefined || val === '') {
+        if (key === 'hash' || val === null || val === undefined || val === '' || val === 'undefined') {
+            console.log('Skipping key:', key, 'value:', val);
             return;
         }
+        const valStr = String(val);
+        console.log('Including key:', key, 'value:', valStr);
         if (arg) arg += '&';
-        arg += key + '=' + val;
+        arg += key + '=' + valStr;
     });
     arg += hashkey;
-    return crypto.createHash('md5').update(arg).digest('hex').toLowerCase();
+    console.log('Final string to hash:', arg);
+    console.log('Hash key length:', hashkey.length);
+    console.log('First 10 chars of hash key:', hashkey.substring(0, 10));
+    
+    const hash = crypto.createHash('md5').update(arg).digest('hex').toLowerCase();
+    console.log('Generated hash:', hash);
+    return hash;
 }
 
 async function queryOrderFromXunhu(orderNo, openOrderId = '') {
@@ -27,29 +40,36 @@ async function queryOrderFromXunhu(orderNo, openOrderId = '') {
         const params = {
             version: "1.1",
             appid: APPID,
-            time: time,
+            time: String(time),
             nonce_str: nonce_str
         };
 
-        if (openOrderId) {
+        if (openOrderId && openOrderId !== '') {
             params.open_order_id = openOrderId;
+            console.log('Using open_order_id:', openOrderId);
         } else {
-            params.out_trade_order = orderNo;
+            params.trade_order_id = orderNo;
+            console.log('Using trade_order_id:', orderNo);
         }
 
         const hash = generateXhHash(params, APPSECRET);
         params.hash = hash;
-        
-        const queryString = Object.keys(params).sort().map(key => {
-            return `${key}=${encodeURIComponent(params[key])}`;
-        }).join('&');
-        
+
+        const sortedKeys = Object.keys(params).sort();
+        const queryString = sortedKeys.map(key => {
+            const val = params[key];
+            if (val === null || val === undefined || val === '') {
+                return '';
+            }
+            return `${key}=${encodeURIComponent(String(val))}`;
+        }).filter(Boolean).join('&');
+
         console.log('=== Query Order ===');
         console.log('Order No:', orderNo);
         console.log('Open Order ID:', openOrderId);
-        console.log('Query params:', params);
+        console.log('Query params (sorted):', JSON.stringify(params));
         console.log('Query string:', queryString);
-        
+
         const response = await fetch(QUERY_URL, {
             method: 'POST',
             headers: { 
@@ -59,12 +79,12 @@ async function queryOrderFromXunhu(orderNo, openOrderId = '') {
             body: queryString,
             timeout: 15000
         });
-        
+
         console.log('Response status:', response.status);
-        
+
         const text = await response.text();
         console.log('Raw response text:', text);
-        
+
         try {
             const result = JSON.parse(text);
             console.log('Parsed JSON:', JSON.stringify(result, null, 2));
