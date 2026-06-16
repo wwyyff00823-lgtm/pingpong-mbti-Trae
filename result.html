@@ -656,6 +656,7 @@
             let currentOrderNo = '';
             let pollInterval = null;
             let currentPayUrl = '';
+            let modalOpenedAt = 0;
 
             function stopPolling() {
                 if (pollInterval) {
@@ -664,23 +665,47 @@
                 }
             }
 
-            async function startPolling(orderNo) {
-                stopPolling();
-                pollInterval = setInterval(async () => {
-                    try {
-                        const result = await checkOrder(orderNo);
-                        if (result.success && result.status === 'paid') {
-                            stopPolling();
-                            paymentModal.classList.remove('show');
-                            checkingModal.classList.remove('show');
-                            renderReport(userLevel);
-                            localStorage.setItem('lastPaidResult', mbtiType);
-                            showToast('支付成功！');
-                        }
-                    } catch (error) {
-                        console.error('Poll error:', error);
+            function savePaymentConfirmed(orderNo) {
+                localStorage.setItem('payment_confirmed_' + orderNo, 'true');
+                localStorage.setItem('payment_confirmed_time', Date.now().toString());
+                localStorage.setItem('lastPaidResult', mbtiType);
+            }
+
+            function isPaymentConfirmed(orderNo) {
+                const confirmed = localStorage.getItem('payment_confirmed_' + orderNo);
+                const confirmedTime = localStorage.getItem('payment_confirmed_time');
+                if (confirmed === 'true' && confirmedTime) {
+                    const elapsed = Date.now() - parseInt(confirmedTime);
+                    if (elapsed < 24 * 60 * 60 * 1000) {
+                        return true;
                     }
-                }, 3000);
+                }
+                return false;
+            }
+
+            function unlockReport() {
+                stopPolling();
+                paymentModal.classList.remove('show');
+                checkingModal.classList.remove('show');
+                renderReport(userLevel);
+                savePaymentConfirmed(currentOrderNo);
+                showToast('支付成功！');
+            }
+
+            async function checkPaymentWithFallback(orderNo) {
+                try {
+                    const result = await checkOrder(orderNo);
+                    if (result.success && result.status === 'paid') {
+                        console.log('Payment confirmed by server');
+                        return { shouldUnlock: true, reason: 'server_confirmed' };
+                    }
+                } catch (error) {
+                    console.error('Check order error:', error);
+                }
+                
+                // 只有服务端确认支付成功才能解锁，不使用本地时间兜底
+                // 防止未支付就解锁报告
+                return { shouldUnlock: false };
             }
 
             unlockBtn.addEventListener('click', async () => {
@@ -689,9 +714,18 @@
                     currentOrderNo = order.orderNo;
                     currentPayUrl = order.payUrl;
                     orderNo.textContent = currentOrderNo;
+                    modalOpenedAt = Date.now();
+                    
+                    // 检查是否已经确认过这个订单
+                    if (isPaymentConfirmed(currentOrderNo)) {
+                        unlockReport();
+                        return;
+                    }
                     
                     if (order.isMobile && currentPayUrl) {
                         qrCode.style.display = 'none';
+                        const existingBtn = document.querySelector('.mobile-pay-btn');
+                        if (existingBtn) existingBtn.remove();
                         const linkBtn = document.createElement('a');
                         linkBtn.href = currentPayUrl;
                         linkBtn.target = '_blank';
@@ -715,17 +749,14 @@
                 paymentModal.classList.remove('show');
                 checkingModal.classList.add('show');
 
-                const result = await checkOrder(currentOrderNo);
-                if (result.success && result.status === 'paid') {
-                    stopPolling();
-                    checkingModal.classList.remove('show');
-                    renderReport(userLevel);
-                    localStorage.setItem('lastPaidResult', mbtiType);
-                    showToast('支付成功！');
+                const checkResult = await checkPaymentWithFallback(currentOrderNo);
+                if (checkResult.shouldUnlock) {
+                    unlockReport();
                 } else {
                     checkingModal.classList.remove('show');
                     paymentModal.classList.add('show');
-                    showToast('支付未完成，请继续支付');
+                    const elapsed = Math.floor((Date.now() - modalOpenedAt) / 1000);
+                    showToast(`支付未完成，已等待${elapsed}秒，请确保已完成支付`);
                 }
             });
 
@@ -743,6 +774,16 @@
                 localStorage.removeItem('lastPaidResult');
                 window.location.href = 'index.html';
             });
+
+            async function startPolling(orderNo) {
+                stopPolling();
+                pollInterval = setInterval(async () => {
+                    const checkResult = await checkPaymentWithFallback(orderNo);
+                    if (checkResult.shouldUnlock) {
+                        unlockReport();
+                    }
+                }, 5000);
+            }
         });
     </script>
 </body>
