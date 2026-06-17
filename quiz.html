@@ -490,12 +490,12 @@
             {
                 id: 'q22',
                 text: '练球时，你更看重哪项指标进步？',
-                dimension: 'SN',
+                dimension: 'TF',
                 options: [
-                    { id: 'q22_opt1', text: '上台率，十个球能接回八个', score: { S: 2 } },
-                    { id: 'q22_opt2', text: '动作规范性，框架标准才专业', score: { S: 1 } },
-                    { id: 'q22_opt3', text: '威胁度，哪怕失误也要有质量', score: { N: -1 } },
-                    { id: 'q22_opt4', text: '战术丰富度，会的套路越多越好', score: { N: -2 } }
+                    { id: 'q22_opt1', text: '上台率，十个球能接回八个', score: { T: 2 } },
+                    { id: 'q22_opt2', text: '动作规范性，框架标准才专业', score: { T: 1 } },
+                    { id: 'q22_opt3', text: '手感舒适度，打起来舒服最重要', score: { F: -1 } },
+                    { id: 'q22_opt4', text: '快乐指数，开心最重要', score: { F: -2 } }
                 ]
             },
             {
@@ -514,10 +514,10 @@
                 text: '打完一场球输了，你走出球馆第一句话是？',
                 dimension: 'EI',
                 options: [
-                    { id: 'q24_opt1', text: '正手位漏了，回去得练步伐', score: { E: 1 } },
-                    { id: 'q24_opt2', text: '战术没打好，下次换个套路', score: { T: 1 } },
-                    { id: 'q24_opt3', text: '今天没睡醒，状态太差了', score: { F: -1 } },
-                    { id: 'q24_opt4', text: '算了就是玩，输赢不重要', score: { P: -2 } }
+                    { id: 'q24_opt1', text: '走，复盘去！找高手请教问题在哪', score: { E: 2 } },
+                    { id: 'q24_opt2', text: '正手位漏了，回去得练步伐', score: { E: 1 } },
+                    { id: 'q24_opt3', text: '今天没睡醒，状态太差了', score: { I: -1 } },
+                    { id: 'q24_opt4', text: '算了就是玩，回家休息', score: { I: -2 } }
                 ]
             },
             {
@@ -545,23 +545,23 @@
             {
                 id: 'q27',
                 text: '发现对手反手位很弱，你会怎么做？',
-                dimension: 'TF',
+                dimension: 'SN',
                 options: [
-                    { id: 'q27_opt1', text: '持续压反手，逻辑上打死弱点', score: { T: 2 } },
-                    { id: 'q27_opt2', text: '压两板反手突然变正手，打组合拳', score: { T: 1 } },
-                    { id: 'q27_opt3', text: '偶尔偷袭，主要还是打相持', score: { F: -1 } },
-                    { id: 'q27_opt4', text: '看心情打，想到啥就打啥', score: { F: -2 } }
+                    { id: 'q27_opt1', text: '精准压制，每一板都打到同一个点', score: { S: 2 } },
+                    { id: 'q27_opt2', text: '按固定套路打，稳扎稳打', score: { S: 1 } },
+                    { id: 'q27_opt3', text: '变线结合，节奏变化', score: { N: -1 } },
+                    { id: 'q27_opt4', text: '怎么开心怎么打，随心而动', score: { N: -2 } }
                 ]
             },
             {
                 id: 'q28',
-                text: '打丢了几个简单球，你脑子里在想？',
-                dimension: 'JP',
+                text: '打丢了几个简单球，队友过来安慰，你会？',
+                dimension: 'TF',
                 options: [
-                    { id: 'q28_opt1', text: '刚才动作错了，下一球按标准调整', score: { J: 2 } },
-                    { id: 'q28_opt2', text: '稳住，按既定节奏打下一个', score: { J: 1 } },
-                    { id: 'q28_opt3', text: '哎呀怎么这么笨，手太生了', score: { P: -1 } },
-                    { id: 'q28_opt4', text: '球台太滑光线暗，正常正常', score: { P: -2 } }
+                    { id: 'q28_opt1', text: '客观分析失误原因，讨论改进方法', score: { T: 2 } },
+                    { id: 'q28_opt2', text: '理性接受安慰，总结问题', score: { T: 1 } },
+                    { id: 'q28_opt3', text: '情绪低落，需要时间平复', score: { F: -1 } },
+                    { id: 'q28_opt4', text: '觉得尴尬，不想说话', score: { F: -2 } }
                 ]
             },
             {
@@ -589,13 +589,46 @@
                     { id: 'q30_opt3', text: '放松心态，顺其自然', score: { P: -1 }, tendency: 'flexible' },
                     { id: 'q30_opt4', text: '该干嘛干嘛，比赛当天再看情况', score: { P: -2 }, tendency: 'flexible' }
                 ]
+            },
+            {
+                id: 'q31',
+                text: '球馆组织比赛，你会主动报名参加吗？',
+                dimension: 'EI',
+                options: [
+                    { id: 'q31_opt1', text: '当然报名，比赛是检验水平的好机会', score: { E: 2 } },
+                    { id: 'q31_opt2', text: '看时间安排，有空就参加', score: { E: 1 } },
+                    { id: 'q31_opt3', text: '不太想参加，更喜欢自己练', score: { I: -1 } },
+                    { id: 'q31_opt4', text: '坚决不参加，比赛压力太大', score: { I: -2 } }
+                ]
+            },
+            {
+                id: 'q32',
+                text: '你会制定每周训练计划并严格执行吗？',
+                dimension: 'JP',
+                options: [
+                    { id: 'q32_opt1', text: '会，计划好每天练什么，严格执行', score: { J: 2 } },
+                    { id: 'q32_opt2', text: '有大致计划，基本能完成', score: { J: 1 } },
+                    { id: 'q32_opt3', text: '偶尔计划，看心情执行', score: { P: -1 } },
+                    { id: 'q32_opt4', text: '从不计划，想练就练', score: { P: -2 } }
+                ]
+            },
+            {
+                id: 'q33',
+                text: '比赛中叫暂停时，你会？',
+                dimension: 'JP',
+                options: [
+                    { id: 'q33_opt1', text: '快速布置战术，明确下一阶段打法', score: { J: 2 } },
+                    { id: 'q33_opt2', text: '擦汗喝水，简单调整心态', score: { J: 1 } },
+                    { id: 'q33_opt3', text: '随便走走，让身体休息', score: { P: -1 } },
+                    { id: 'q33_opt4', text: '不想叫暂停，觉得没必要', score: { P: -2 } }
+                ]
             }
         ];
 
         let currentIndex = 0;
         let shuffledQuestions = [];
         let answers = {};
-        let dimensionScores = { E: 0, S: 0, T: 0, J: 0 };
+        let dimensionScores = { E: 0, I: 0, S: 0, N: 0, T: 0, F: 0, J: 0, P: 0 };
 
         function shuffleArray(array) {
             const arr = [...array];
@@ -658,7 +691,9 @@
             // 效检测试题不参与维度计分
             if (selectedOption && selectedOption.score && !question.validityCheck) {
                 Object.keys(selectedOption.score).forEach(key => {
-                    dimensionScores[key] += selectedOption.score[key];
+                    if (dimensionScores[key] !== undefined) {
+                        dimensionScores[key] += selectedOption.score[key];
+                    }
                 });
             }
             
@@ -738,16 +773,17 @@
         }
 
         function calculateMBTI() {
-            const E = dimensionScores.E;
-            const S = dimensionScores.S;
-            const T = dimensionScores.T;
-            const J = dimensionScores.J;
+            // 比较每个维度的两个对立面得分
+            const EI = dimensionScores.E - dimensionScores.I;
+            const SN = dimensionScores.S - dimensionScores.N;
+            const TF = dimensionScores.T - dimensionScores.F;
+            const JP = dimensionScores.J - dimensionScores.P;
             
             const mbti = 
-                (E > 0 ? 'E' : 'I') +
-                (S > 0 ? 'S' : 'N') +
-                (T > 0 ? 'T' : 'F') +
-                (J > 0 ? 'J' : 'P');
+                (EI > 0 ? 'E' : 'I') +
+                (SN > 0 ? 'S' : 'N') +
+                (TF > 0 ? 'T' : 'F') +
+                (JP > 0 ? 'J' : 'P');
             
             return mbti;
         }
