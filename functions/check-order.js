@@ -69,7 +69,6 @@ exports.handler = async function(event, context) {
         const nonce_str = crypto.randomBytes(16).toString('hex');
         
         const params = {
-            version: "1.1",
             appid: APPID,
             time: time,
             nonce_str: nonce_str
