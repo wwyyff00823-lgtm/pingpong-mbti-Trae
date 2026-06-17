@@ -637,7 +637,7 @@
                     console.log('status:', data.status);
                     console.log('code:', data.code);
                     
-                    if (data.paid === true || data.status === 'paid' || data.status === 'OD' || data.status === 'PAID' || data.status === 'TRADE_SUCCESS') {
+                    if (data.data.status === 'OD') {
                         resolve({
                             success: true,
                             orderNo,
