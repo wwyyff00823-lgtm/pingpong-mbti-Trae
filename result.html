@@ -74,6 +74,11 @@
             margin-bottom: 24px;
             animation: bounce 2s ease-in-out infinite;
         }
+        .personality-emoji img {
+            width: 120px;
+            height: 120px;
+            object-fit: contain;
+        }
         @keyframes bounce {
             0%, 100% { transform: translateY(0); }
             50% { transform: translateY(-10px); }
@@ -316,17 +321,23 @@
             margin-bottom: 20px;
         }
         .qr-code {
-            width: 180px;
-            height: 180px;
+            width: 200px;
+            height: 200px;
             border: 2px solid #f0f0f0;
             border-radius: 12px;
             margin: 0 auto;
         }
+        .qr-hint {
+            font-size: 13px;
+            color: #999;
+            text-align: center;
+            margin: 12px 0;
+            line-height: 1.6;
+        }
         .save-qr-btn {
-            display: none;
             width: 100%;
             padding: 12px;
-            margin-top: 12px;
+            margin-top: 8px;
             background: #f5f5f5;
             border: 1px solid #ddd;
             border-radius: 8px;
@@ -338,9 +349,6 @@
         .save-qr-btn:hover {
             background: #eee;
             border-color: #ccc;
-        }
-        .save-qr-btn.show {
-            display: block;
         }
         .order-info {
             background: #f8f9fa;
@@ -365,13 +373,6 @@
             color: #c41e3a;
             font-weight: bold;
             font-size: 18px;
-        }
-        .modal-hint {
-            font-size: 13px;
-            color: #999;
-            text-align: center;
-            margin-bottom: 20px;
-            line-height: 1.6;
         }
         .modal-btn {
             width: 100%;
@@ -398,6 +399,27 @@
             background: #e8e8e8;
             box-shadow: none;
         }
+        .modal-btn.wechat-btn {
+            background: linear-gradient(135deg, #07c160 0%, #10b981 100%);
+            margin-top: 0;
+            margin-bottom: 10px;
+        }
+        .modal-btn.wechat-btn:hover {
+            box-shadow: 0 6px 20px rgba(7, 193, 96, 0.45);
+        }
+        .modal-btn.alipay-btn {
+            background: linear-gradient(135deg, #1677ff 0%, #3b82f6 100%);
+            margin-top: 0;
+        }
+        .modal-btn.alipay-btn:hover {
+            box-shadow: 0 6px 20px rgba(22, 119, 255, 0.45);
+        }
+        .pay-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 16px;
+        }
         .checking-payment {
             text-align: center;
             padding: 20px;
@@ -417,6 +439,12 @@
         .checking-text {
             font-size: 14px;
             color: #666;
+        }
+        .poll-counter {
+            font-size: 12px;
+            color: #999;
+            text-align: center;
+            margin-top: 8px;
         }
     </style>
 </head>
@@ -446,7 +474,7 @@
         </div>
 
         <div class="unlock-section" id="unlockSection">
-            <div class="unlock-title">仅需 9.9 元解锁千字详细报告</div>
+            <div class="unlock-title">仅需 ¥9.9 元解锁千字详细报告</div>
             <div class="unlock-desc">包含该人格和该水平下的深度病理分析、涨球处方和器材建议等内容，助您快速涨球！</div>
             <button class="btn" id="unlockBtn">立刻付款</button>
         </div>
@@ -487,10 +515,15 @@
 
     <div class="modal-overlay" id="paymentModal">
         <div class="modal-content">
-            <div class="modal-title">扫码支付</div>
+            <div class="modal-title">扫码支付 ¥9.9</div>
             <div class="qr-code-container">
                 <img id="qrCode" class="qr-code" src="" alt="支付二维码">
-                <button class="save-qr-btn" id="saveQrBtn" style="display:none;">保存二维码到相册</button>
+                <div class="qr-hint" id="qrHint">请长按识别二维码，或保存二维码到相册，用微信/支付宝“扫一扫”选择相册完成扫码支付</div>
+                <button class="save-qr-btn" id="saveQrBtn">保存二维码到相册</button>
+            </div>
+            <div class="pay-buttons" id="payButtons" style="display: none;">
+                <button class="modal-btn wechat-btn" id="wechatPayBtn">🔵 微信支付</button>
+                <button class="modal-btn alipay-btn" id="alipayPayBtn">🟡 支付宝支付</button>
             </div>
             <div class="order-info">
                 <div class="order-row">
@@ -502,7 +535,7 @@
                     <span class="order-value amount-value">¥9.9</span>
                 </div>
             </div>
-            <div class="modal-hint" id="paymentHint">请使用微信或支付宝扫码支付<br/>支付成功后将自动解锁报告</div>
+            <div class="poll-counter" id="pollCounter"></div>
             <button class="modal-btn" id="checkPaymentBtn">已支付，点击验证</button>
             <button class="modal-btn cancel" id="cancelPaymentBtn">取消支付</button>
         </div>
@@ -525,6 +558,10 @@
         const integrityScore = localStorage.getItem('integrityScore') === 'true';
         const userLevel = localStorage.getItem('userLevel') || 'mid';
         
+        // 轮询配置
+        const MAX_POLL_COUNT = 60;  // 最多轮询60次（5秒间隔 = 5分钟）
+        const POLL_INTERVAL = 5000;  // 5秒
+        
         function showToast(msg) {
             const toast = document.getElementById('toast');
             toast.textContent = msg;
@@ -538,17 +575,36 @@
 
             document.getElementById('mbtiType').textContent = mbtiType;
             document.getElementById('personalityName').textContent = personality.name;
-            document.getElementById('personalityEmoji').textContent = personality.emoji;
+            
+            const emojiEl = document.getElementById('personalityEmoji');
+            if (personality.emoji && personality.emoji.match(/\.(png|jpg|jpeg|gif|webp)$/i)) {
+                const img = document.createElement('img');
+                img.src = personality.emoji;
+                img.alt = personality.name;
+                img.onerror = function() {
+                    // 图片加载失败时显示默认emoji
+                    emojiEl.textContent = '🏓';
+                    img.remove();
+                };
+                emojiEl.textContent = '';
+                emojiEl.appendChild(img);
+            } else {
+                emojiEl.textContent = personality.emoji || '🏓';
+            }
 
             const traitsList = document.getElementById('traitsList');
             traitsList.innerHTML = '';
             personality.traits.forEach(trait => {
                 const item = document.createElement('div');
                 item.className = 'trait-item';
-                item.innerHTML = `
-                    <span class="trait-icon">✓</span>
-                    <span class="trait-text">${trait}</span>
-                `;
+                const icon = document.createElement('span');
+                icon.className = 'trait-icon';
+                icon.textContent = '✓';
+                const text = document.createElement('span');
+                text.className = 'trait-text';
+                text.textContent = trait;
+                item.appendChild(icon);
+                item.appendChild(text);
                 traitsList.appendChild(item);
             });
         }
@@ -582,110 +638,91 @@
             return (/android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent.toLowerCase()));
         }
 
-        async function createOrder() {
-            const orderNo = 'PING' + Date.now() + Math.random().toString(36).substr(2, 8).toUpperCase();
+        // 检查是否已为当前MBTI类型支付过（相同MBTI类型免支付）
+        function hasPaidForMBTI() {
+            const paidMbtis = localStorage.getItem('paidMbtis');
+            if (paidMbtis) {
+                const paidList = JSON.parse(paidMbtis);
+                return paidList.includes(mbtiType);
+            }
+            return false;
+        }
+
+        // 记录已支付的MBTI类型
+        function markMbtiAsPaid() {
+            const paidMbtis = localStorage.getItem('paidMbtis');
+            const paidList = paidMbtis ? JSON.parse(paidMbtis) : [];
+            if (!paidList.includes(mbtiType)) {
+                paidList.push(mbtiType);
+                localStorage.setItem('paidMbtis', JSON.stringify(paidList));
+            }
+        }
+
+        // 服务端验证支付状态
+        async function checkPaymentStatus(orderNo, openOrderId = '') {
+            // 如果已为当前MBTI类型支付过，直接返回成功
+            if (hasPaidForMBTI()) {
+                return true;
+            }
+            
             try {
+                const userId = localStorage.getItem('userId');
+                const response = await fetch('/.netlify/functions/check-order', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        order_no: orderNo, 
+                        open_order_id: openOrderId,
+                        mbtiType: mbtiType,
+                        userLevel: userLevel,
+                        userId: userId
+                    })
+                });
+                const data = await response.json();
+                // 如果支付成功，记录MBTI类型
+                if (data.paid === true || data.status === 'paid') {
+                    markMbtiAsPaid();
+                }
+                return data.paid === true || data.status === 'paid';
+            } catch (error) {
+                console.error('Check payment error:', error);
+                return false;
+            }
+        }
+
+        // 创建订单
+        async function createOrder() {
+            try {
+                const userId = localStorage.getItem('userId');
                 const response = await fetch('/.netlify/functions/create-order', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
-                        order_no: orderNo,
-                        price: 9.9,
-                        goods_name: '乒乓球MBTI测试报告'
+                        mbtiType: mbtiType,
+                        userLevel: userLevel,
+                        userId: userId
                     })
                 });
                 const data = await response.json();
-                console.log('Create order response:', JSON.stringify(data, null, 2));
                 if (data.code === 0) {
-                    const isMobileDevice = isMobile();
-                    const qrCodeUrl = data.url_qrcode || data.pay_url || data.url;
-                    const mobileUrl = data.url || data.pay_url || data.url_qrcode;
                     return {
                         success: true,
-                        orderNo: orderNo,
-                        openOrderId: data.open_order_id || data.openid || '',
-                        qrCodeUrl: qrCodeUrl,
-                        payUrl: mobileUrl,
-                        isMobile: isMobileDevice,
-                        expiresAt: new Date(Date.now() + 30 * 60 * 1000).toISOString()
+                        orderNo: data.order_no,
+                        openOrderId: data.open_order_id || '',
+                        qrCodeUrl: data.url_qrcode || data.pay_url,
+                        payUrl: data.url || data.pay_url,
+                        price: data.price || 9.9
                     };
                 } else {
-                    console.error('Payment API error:', data.msg);
                     return { success: false, message: data.msg || '创建订单失败' };
                 }
             } catch (error) {
-                console.error('Network error:', error);
-                return {
-                    success: false,
-                    message: '网络错误，无法连接支付服务器'
-                };
+                console.error('Create order error:', error);
+                return { success: false, message: '网络错误，无法连接支付服务器' };
             }
         }
 
-        async function checkOrder(orderNo, openOrderId = '') {
-            return new Promise((resolve, reject) => {
-                const timeout = setTimeout(() => {
-                    console.log('Check order timeout');
-                    resolve({
-                        success: false,
-                        orderNo,
-                        status: 'pending',
-                        message: '请求超时'
-                    });
-                }, 15000);
-                
-                fetch('/.netlify/functions/check-order', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ order_no: orderNo, open_order_id: openOrderId })
-                }).then(response => {
-                    clearTimeout(timeout);
-                    if (!response.ok) {
-                        throw new Error('HTTP error ' + response.status);
-                    }
-                    return response.json();
-                }).then(data => {
-                    console.log('=== Check Order Response ===');
-                    console.log('Full data:', JSON.stringify(data, null, 2));
-                    console.log('paid:', data.paid);
-                    console.log('status:', data.status);
-                    console.log('code:', data.code);
-                    
-                    if (data.paid === true || data.status === 'paid' || data.status === 'OD' || data.status === 'PAID' || data.status === 'TRADE_SUCCESS') {
-                        resolve({
-                            success: true,
-                            orderNo,
-                            status: 'paid',
-                            amount: 9.9,
-                            verified: true,
-                            response: data
-                        });
-                    } else {
-                        resolve({
-                            success: true,
-                            orderNo,
-                            status: data.status || 'pending',
-                            amount: 9.9,
-                            verified: true,
-                            error: data.msg || data.message || '支付未完成',
-                            response: data
-                        });
-                    }
-                }).catch(error => {
-                    clearTimeout(timeout);
-                    console.error('Check order error:', error);
-                    resolve({
-                        success: false,
-                        orderNo,
-                        status: 'pending',
-                        message: '查询失败，请稍后重试',
-                        error: error.message
-                    });
-                });
-            });
-        }
-
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('DOMContentLoaded', async () => {
             if (!mbtiType) {
                 window.location.href = 'index.html';
                 return;
@@ -697,114 +734,139 @@
 
             renderPersonality();
 
+            // 检查是否已为当前MBTI类型支付过，如果是则直接显示完整报告
+            if (hasPaidForMBTI()) {
+                document.getElementById('unlockSection').style.display = 'none';
+                document.getElementById('reportSection').classList.add('show');
+                renderReport(userLevel);
+            }
+
             const unlockBtn = document.getElementById('unlockBtn');
             const restartBtn = document.getElementById('restartBtn');
             const paymentModal = document.getElementById('paymentModal');
             const checkingModal = document.getElementById('checkingModal');
             const qrCode = document.getElementById('qrCode');
-            const orderNo = document.getElementById('orderNo');
+            const orderNoEl = document.getElementById('orderNo');
             const checkPaymentBtn = document.getElementById('checkPaymentBtn');
             const cancelPaymentBtn = document.getElementById('cancelPaymentBtn');
             const saveQrBtn = document.getElementById('saveQrBtn');
-            const paymentHint = document.getElementById('paymentHint');
+            const qrHint = document.getElementById('qrHint');
+            const pollCounter = document.getElementById('pollCounter');
 
             let currentOrderNo = '';
             let currentOpenOrderId = '';
-            let pollInterval = null;
             let currentPayUrl = '';
-            let modalOpenedAt = 0;
-
-            async function saveQrCode() {
-                const canvas = document.createElement('canvas');
-                const ctx = canvas.getContext('2d');
-                const img = document.getElementById('qrCode');
-                
-                canvas.width = img.width;
-                canvas.height = img.height;
-                ctx.drawImage(img, 0, 0);
-                
-                try {
-                    const link = document.createElement('a');
-                    link.download = 'payment_qrcode.png';
-                    link.href = canvas.toDataURL('image/png');
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                    showToast('二维码已保存到相册');
-                } catch (error) {
-                    console.error('Save QR code error:', error);
-                    showToast('保存失败，请手动截图');
-                }
-            }
-
-            saveQrBtn.addEventListener('click', saveQrCode);
+            let pollInterval = null;
+            let pollCount = 0;
 
             function stopPolling() {
                 if (pollInterval) {
                     clearInterval(pollInterval);
                     pollInterval = null;
                 }
-            }
-
-            function savePaymentConfirmed() {
-                localStorage.setItem('mbti_paid_' + mbtiType + '_' + userLevel, 'true');
-                localStorage.setItem('mbti_paid_time', Date.now().toString());
-                localStorage.setItem('lastPaidResult', mbtiType);
-                localStorage.setItem('lastPaidLevel', userLevel);
-            }
-
-            function isPaymentConfirmed() {
-                const paid = localStorage.getItem('mbti_paid_' + mbtiType + '_' + userLevel);
-                if (paid === 'true') {
-                    return true;
-                }
-                return false;
+                pollCount = 0;
             }
 
             function unlockReport() {
                 stopPolling();
                 paymentModal.classList.remove('show');
                 checkingModal.classList.remove('show');
-                document.getElementById('unlockSection').style.display = 'none';
                 renderReport(userLevel);
-                document.getElementById('reportSection').classList.add('show');
-                savePaymentConfirmed();
-                showToast('支付成功！');
+                showToast('支付成功！报告已解锁');
             }
 
-            if (isPaymentConfirmed()) {
-                unlockReport();
-                return;
-            }
-
-            async function checkPaymentWithFallback(orderNo, openOrderId = '') {
+            // 保存二维码（改进移动端兼容性）
+            async function saveQrCode() {
                 try {
-                    const result = await checkOrder(orderNo, openOrderId);
-                    console.log('=== Payment Check Result ===');
-                    console.log('Full result:', JSON.stringify(result, null, 2));
-                    console.log('success:', result.success);
-                    console.log('status:', result.status);
-                    console.log('paid:', result.paid);
-                    console.log('verified:', result.verified);
+                    const img = document.getElementById('qrCode');
                     
-                    // 检查多种支付成功的条件
-                    const isPaid = result.success && (result.status === 'paid' || result.paid === true || 
-                        result.status === 'OD' || result.status === 'PAID' || result.status === 'TRADE_SUCCESS');
-                    console.log('Is paid:', isPaid);
-                    
-                    if (isPaid) {
-                        console.log('Payment confirmed!');
-                        return { shouldUnlock: true, reason: 'server_confirmed', result: result };
+                    // 对于 iOS Safari，使用 canvas 绘制并提示长按保存
+                    if (isMobile() && /iphone|ipad|ipod/i.test(navigator.userAgent.toLowerCase())) {
+                        const canvas = document.createElement('canvas');
+                        canvas.width = 200;
+                        canvas.height = 200;
+                        const ctx = canvas.getContext('2d');
+                        
+                        const qrImg = new Image();
+                        qrImg.crossOrigin = 'anonymous';
+                        
+                        await new Promise((resolve, reject) => {
+                            qrImg.onload = resolve;
+                            qrImg.onerror = reject;
+                            qrImg.src = img.src;
+                        });
+                        
+                        ctx.drawImage(qrImg, 0, 0, 200, 200);
+                        
+                        // 创建一个临时页面显示图片，方便用户长按保存
+                        const tempPage = `
+                            <!DOCTYPE html>
+                            <html>
+                            <head>
+                                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                                <title>支付二维码</title>
+                                <style>
+                                    body { margin: 0; padding: 20px; background: #fff; text-align: center; }
+                                    img { max-width: 100%; height: auto; border-radius: 12px; }
+                                    p { margin-top: 20px; color: #666; font-size: 14px; }
+                                </style>
+                            </head>
+                            <body>
+                                <img src="${canvas.toDataURL('image/png')}" alt="支付二维码">
+                                <p>长按图片保存到相册</p>
+                            </body>
+                            </html>
+                        `;
+                        
+                        const blob = new Blob([tempPage], { type: 'text/html' });
+                        const url = URL.createObjectURL(blob);
+                        window.open(url, '_blank');
+                        showToast('请在新窗口长按图片保存');
                     } else {
-                        console.log('Payment not confirmed:', result.msg || result.message || result.error);
+                        // 其他设备：直接下载
+                        const response = await fetch(img.src);
+                        const blob = await response.blob();
+                        const url = URL.createObjectURL(blob);
+                        const link = document.createElement('a');
+                        link.href = url;
+                        link.download = 'MBTI_payment_qrcode.png';
+                        
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                        URL.revokeObjectURL(url);
+                        showToast('二维码已保存到相册');
                     }
                 } catch (error) {
-                    console.error('Check order error:', error);
+                    console.error('Save QR error:', error);
+                    // 备用方案：提示用户手动截图
+                    showToast('保存失败，请手动截图保存二维码');
                 }
-                
-                return { shouldUnlock: false };
             }
 
+            saveQrBtn.addEventListener('click', saveQrCode);
+
+            // 微信支付按钮点击
+            document.getElementById('wechatPayBtn').addEventListener('click', () => {
+                if (currentPayUrl) {
+                    // 尝试唤醒微信支付
+                    const wechatUrl = `weixin://pay?url=${encodeURIComponent(currentPayUrl)}`;
+                    window.location.href = wechatUrl;
+                    showToast('正在打开微信支付...');
+                }
+            });
+
+            // 支付宝支付按钮点击
+            document.getElementById('alipayPayBtn').addEventListener('click', () => {
+                if (currentPayUrl) {
+                    // 尝试唤醒支付宝支付
+                    const alipayUrl = `alipays://platformapi/startapp?appId=20000056&url=${encodeURIComponent(currentPayUrl)}`;
+                    window.location.href = alipayUrl;
+                    showToast('正在打开支付宝支付...');
+                }
+            });
+
+            // 点击解锁按钮
             unlockBtn.addEventListener('click', async () => {
                 try {
                     const order = await createOrder();
@@ -812,88 +874,176 @@
                         showToast(order?.message || '创建订单失败，请重试');
                         return;
                     }
+                    
                     currentOrderNo = order.orderNo;
                     currentOpenOrderId = order.openOrderId || '';
-                    currentPayUrl = order.payUrl;
-                    orderNo.textContent = currentOrderNo;
-                    modalOpenedAt = Date.now();
+                    orderNoEl.textContent = currentOrderNo;
                     
-                    // 检查是否已经确认过支付
-                    if (isPaymentConfirmed()) {
-                        unlockReport();
-                        return;
-                    }
+                    // 显示二维码
+                    qrCode.src = order.qrCodeUrl;
                     
-                    if (order.isMobile) {
-                        qrCode.style.display = 'block';
-                        qrCode.src = order.qrCodeUrl;
-                        saveQrBtn.style.display = 'block';
-                        paymentHint.textContent = '长按二维码识别支付，或点击下方按钮保存到相册';
-                        
-                        const existingBtn = document.querySelector('.mobile-pay-btn');
-                        if (existingBtn) existingBtn.remove();
-                        const linkBtn = document.createElement('a');
-                        linkBtn.href = currentPayUrl;
-                        linkBtn.target = '_blank';
-                        linkBtn.className = 'mobile-pay-btn';
-                        linkBtn.textContent = '保存二维码到相册';
-                        linkBtn.style.cssText = 'display:block;width:100%;height:56px;line-height:56px;background:#c41e3a;color:#fff;border-radius:12px;font-weight:bold;font-size:18px;text-decoration:none;margin-top:10px;';
-                        qrCode.parentNode.appendChild(linkBtn);
+                    // 保存支付链接（用于跳转）
+                    currentPayUrl = order.payUrl || order.url || '';
+                    
+                    // 更新提示文字
+                    qrHint.innerHTML = '请长按识别二维码，或保存二维码到相册，用微信/支付宝“扫一扫”选择相册完成扫码支付';
+                    saveQrBtn.style.display = 'block';
+                    
+                    // 如果有支付链接，显示微信/支付宝跳转按钮
+                    if (currentPayUrl) {
+                        document.getElementById('payButtons').style.display = 'flex';
                     } else {
-                        qrCode.style.display = 'block';
-                        qrCode.src = order.qrCodeUrl;
-                        saveQrBtn.style.display = 'none';
-                        paymentHint.textContent = '请使用微信或支付宝扫码支付\n支付成功后将自动解锁报告';
+                        document.getElementById('payButtons').style.display = 'none';
                     }
                     
                     paymentModal.classList.add('show');
-                    startPolling(currentOrderNo, currentOpenOrderId);
+                    pollCount = 0;
+                    startPolling();
+                    
                 } catch (error) {
                     console.error('Payment error:', error);
                     showToast('支付操作失败，请重试');
                 }
             });
 
+            // 开始轮询
+            function startPolling() {
+                stopPolling();
+                pollInterval = setInterval(async () => {
+                    pollCount++;
+                    
+                    // 显示轮询计数和倒计时
+                    const remainingSeconds = Math.round((MAX_POLL_COUNT - pollCount) * POLL_INTERVAL / 1000);
+                    pollCounter.textContent = `自动验证中 (${pollCount}/${MAX_POLL_COUNT})，剩余约${remainingSeconds}秒`;
+                    
+                    if (pollCount > MAX_POLL_COUNT) {
+                        stopPolling();
+                        pollCounter.textContent = '支付超时，正在重新获取支付码...';
+                        checkPaymentBtn.disabled = true;
+                        checkPaymentBtn.textContent = '重新获取中...';
+                        
+                        // 自动重新创建订单
+                        setTimeout(async () => {
+                            try {
+                                const order = await createOrder();
+                                if (!order || !order.success) {
+                                    pollCounter.textContent = '重新获取失败，请点击下方按钮重试';
+                                    checkPaymentBtn.textContent = '重新获取支付码';
+                                    checkPaymentBtn.disabled = false;
+                                    return;
+                                }
+                                
+                                currentOrderNo = order.orderNo;
+                                currentOpenOrderId = order.openOrderId || '';
+                                orderNoEl.textContent = currentOrderNo;
+                                qrCode.src = order.qrCodeUrl;
+                                
+                                pollCount = 0;
+                                checkPaymentBtn.textContent = '已支付，点击验证';
+                                checkPaymentBtn.disabled = false;
+                                pollCounter.textContent = `自动验证中 (${pollCount}/${MAX_POLL_COUNT})，剩余约${Math.round(MAX_POLL_COUNT * POLL_INTERVAL / 1000)}秒`;
+                                startPolling();
+                                showToast('支付码已更新，请重新扫码支付');
+                            } catch (error) {
+                                console.error('Recreate order error:', error);
+                                pollCounter.textContent = '重新获取失败，请点击下方按钮重试';
+                                checkPaymentBtn.textContent = '重新获取支付码';
+                                checkPaymentBtn.disabled = false;
+                            }
+                        }, 1500);
+                        return;
+                    }
+                    
+                    try {
+                        const isPaid = await checkPaymentStatus(currentOrderNo, currentOpenOrderId);
+                        if (isPaid) {
+                            unlockReport();
+                        }
+                    } catch (error) {
+                        console.error('Polling error:', error);
+                        // 网络错误不中断轮询，继续尝试
+                    }
+                }, POLL_INTERVAL);
+            }
+
+            // 重新创建订单
+            async function recreateOrder() {
+                try {
+                    checkPaymentBtn.disabled = true;
+                    checkPaymentBtn.textContent = '创建中...';
+                    
+                    const order = await createOrder();
+                    if (!order || !order.success) {
+                        showToast(order?.message || '重新创建订单失败，请检查网络后重试');
+                        checkPaymentBtn.textContent = '重新获取支付码';
+                        checkPaymentBtn.disabled = false;
+                        return;
+                    }
+                    
+                    currentOrderNo = order.orderNo;
+                    currentOpenOrderId = order.openOrderId || '';
+                    orderNoEl.textContent = currentOrderNo;
+                    qrCode.src = order.qrCodeUrl;
+                    
+                    pollCount = 0;
+                    checkPaymentBtn.textContent = '已支付，点击验证';
+                    checkPaymentBtn.disabled = false;
+                    startPolling();
+                    showToast('支付码已更新，请重新扫码支付');
+                    
+                } catch (error) {
+                    console.error('Recreate order error:', error);
+                    showToast('重新创建订单失败，请稍后重试');
+                    checkPaymentBtn.textContent = '重新获取支付码';
+                    checkPaymentBtn.disabled = false;
+                }
+            }
+
+            // 手动验证按钮
             checkPaymentBtn.addEventListener('click', async () => {
+                // 如果已超时，重新创建订单
+                if (pollCount > MAX_POLL_COUNT) {
+                    recreateOrder();
+                    return;
+                }
+                
                 paymentModal.classList.remove('show');
                 checkingModal.classList.add('show');
 
-                const checkResult = await checkPaymentWithFallback(currentOrderNo, currentOpenOrderId);
-                console.log('Payment check result:', checkResult);
-                
-                if (checkResult.shouldUnlock) {
-                    unlockReport();
-                } else {
+                try {
+                    const isPaid = await checkPaymentStatus(currentOrderNo, currentOpenOrderId);
+                    
+                    if (isPaid) {
+                        unlockReport();
+                    } else {
+                        checkingModal.classList.remove('show');
+                        paymentModal.classList.add('show');
+                        showToast('支付未完成，请确保已完成支付后再尝试');
+                    }
+                } catch (error) {
+                    console.error('Check payment error:', error);
                     checkingModal.classList.remove('show');
                     paymentModal.classList.add('show');
-                    showToast('支付未完成，请确保已完成支付后再尝试');
+                    showToast('网络错误，请检查网络后重试');
                 }
             });
 
+            // 取消支付
             cancelPaymentBtn.addEventListener('click', () => {
                 stopPolling();
                 paymentModal.classList.remove('show');
             });
 
+            // 重新测试
             restartBtn.addEventListener('click', () => {
                 stopPolling();
+                // 保留 userId 和 userLevel，只清除答题相关数据
                 localStorage.removeItem('answers');
                 localStorage.removeItem('integrityScore');
                 localStorage.removeItem('mbtiType');
                 localStorage.removeItem('dimensionScores');
-                localStorage.removeItem('lastPaidResult');
                 window.location.href = 'index.html';
             });
-
-            async function startPolling(orderNo, openOrderId = '') {
-                stopPolling();
-                pollInterval = setInterval(async () => {
-                    const checkResult = await checkPaymentWithFallback(orderNo, openOrderId);
-                    if (checkResult.shouldUnlock) {
-                        unlockReport();
-                    }
-                }, 5000);
-            }
         });
     </script>
 </body>

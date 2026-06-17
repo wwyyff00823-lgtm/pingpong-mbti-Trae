@@ -207,7 +207,7 @@
     <div class="container">
         <div class="logo">🏓</div>
         <h1>业余乒乓球人的<br/>MBTI风格测试</h1>
-        <p class="subtitle">5分钟，30道选择题，判断你的打球性格，给你专属涨球妙计</p>
+        <p class="subtitle">5分钟，36道选择题，判断你的打球性格，给你专属涨球妙计</p>
         
         <div class="level-card" data-level="low">
             <div class="level-header">
@@ -251,6 +251,33 @@
         const btn = document.getElementById('startBtn');
         const toast = document.getElementById('toast');
         let selectedLevel = '';
+
+        function generateUUID() {
+            if (localStorage.getItem('userId')) {
+                return localStorage.getItem('userId');
+            }
+            const uuid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                const r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+                return v.toString(16);
+            });
+            localStorage.setItem('userId', uuid);
+            return uuid;
+        }
+
+        // 页面加载时自动选中之前选择的水平
+        document.addEventListener('DOMContentLoaded', () => {
+            const savedLevel = localStorage.getItem('userLevel');
+            if (savedLevel) {
+                const savedCard = document.querySelector(`.level-card[data-level="${savedLevel}"]`);
+                if (savedCard) {
+                    cards.forEach(c => c.classList.remove('selected'));
+                    savedCard.classList.add('selected');
+                    selectedLevel = savedLevel;
+                    btn.disabled = false;
+                }
+            }
+            generateUUID();
+        });
 
         cards.forEach(card => {
             card.addEventListener('click', () => {

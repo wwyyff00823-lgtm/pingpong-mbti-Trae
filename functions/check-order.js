@@ -1,25 +1,9 @@
 const crypto = require('crypto');
 
+// 环境变量
 const APPID = process.env.XUNHUPAY_APPID;
 const APPSECRET = process.env.XUNHUPAY_APPSECRET;
 const QUERY_URL = "https://api.xunhupay.com/payment/query.html";
-
-const ORDERS_KEY = 'PING_PAID_ORDERS';
-
-function readOrders() {
-    try {
-        const ordersStr = process.env[ORDERS_KEY];
-        return ordersStr ? JSON.parse(ordersStr) : {};
-    } catch (error) {
-        console.log('Failed to parse orders from environment:', error.message);
-        return {};
-    }
-}
-
-function isOrderPaid(orderNo) {
-    const orders = readOrders();
-    return orders[orderNo] === 'paid';
-}
 
 function generateXhHash(params, hashkey) {
     const cleanParams = { ...params };
@@ -30,25 +14,24 @@ function generateXhHash(params, hashkey) {
         return val !== null && val !== undefined && val !== '' && val !== 'undefined';
     }).sort();
     
-    console.log('=== Hash Generation ===');
-    console.log('Original params:', JSON.stringify(params));
-    console.log('Clean params (without hash):', JSON.stringify(cleanParams));
-    console.log('Keys to sign:', sortedKeys);
-    
     const arg = sortedKeys.map(key => `${key}=${String(cleanParams[key])}`).join('&');
     const finalStr = arg + hashkey;
     
-    console.log('String before MD5:', finalStr);
-    
-    const hash = crypto.createHash('md5').update(finalStr).digest('hex').toLowerCase();
-    console.log('Generated hash:', hash);
-    
-    return hash;
+    return crypto.createHash('md5').update(finalStr).digest('hex').toLowerCase();
 }
 
+const ALLOWED_ORIGINS = [
+    'https://ping-mbti.netlify.app',
+    'http://localhost:8000',
+    'http://127.0.0.1:8000'
+];
+
 exports.handler = async function(event, context) {
+    const origin = event.headers.origin || event.headers.Origin || '';
+    const allowedOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+    
     const headers = {
-        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Origin': allowedOrigin,
         'Access-Control-Allow-Headers': 'Content-Type',
         'Access-Control-Allow-Methods': 'POST, OPTIONS',
         'Content-Type': 'application/json'
@@ -71,27 +54,68 @@ exports.handler = async function(event, context) {
         formData.forEach((value, key) => { body[key] = value; });
     }
 
-    const { order_no, open_order_id } = body;
+    const { order_no, open_order_id, mbtiType, userLevel, userId } = body;
     
     if (!order_no) {
         return { statusCode: 400, headers, body: JSON.stringify({ code: -1, msg: "Missing order_no" }) };
     }
 
-    console.log('=== Payment Check Request ===');
-    console.log('Order No:', order_no);
-    console.log('Open Order ID:', open_order_id);
+    console.log('Checking order:', order_no);
     
+    // 首先从 Netlify Blobs 查询本地支付状态
     try {
-        const localPaid = isOrderPaid(order_no);
-        if (localPaid) {
-            console.log('Order found in local paid list');
-            return { 
-                statusCode: 200, 
-                headers, 
-                body: JSON.stringify({ code: 0, paid: true, status: 'paid', msg: "Payment confirmed locally" }) 
-            };
+        const store = await import('@netlify/blobs').then(m => m.getStore('payments'));
+        
+        // 查询订单支付状态
+        const orderData = await store.get(order_no);
+        if (orderData) {
+            const payment = JSON.parse(orderData);
+            if (payment.status === 'paid') {
+                console.log('Order found in Blobs as paid');
+                return { 
+                    statusCode: 200, 
+                    headers, 
+                    body: JSON.stringify({ 
+                        code: 0, 
+                        paid: true, 
+                        status: 'paid',
+                        order_no: order_no,
+                        msg: "Payment confirmed" 
+                    }) 
+                };
+            }
         }
-
+        
+        // 如果提供了 userId、mbtiType 和 userLevel，查询用户支付记录（必须绑定userId）
+        if (userId && mbtiType && userLevel) {
+            const userPaymentKey = `paid_${userId}_${mbtiType}_${userLevel.substring(0, 1).toUpperCase()}`;
+            const userPaymentData = await store.get(userPaymentKey);
+            if (userPaymentData) {
+                const userPayment = JSON.parse(userPaymentData);
+                if (userPayment.paid === true) {
+                    console.log('User payment found in Blobs:', userPaymentKey);
+                    return { 
+                        statusCode: 200, 
+                        headers, 
+                        body: JSON.stringify({ 
+                            code: 0, 
+                            paid: true, 
+                            status: 'paid',
+                            order_no: userPayment.order_no || order_no,
+                            msg: "Payment confirmed by user record" 
+                        }) 
+                    };
+                }
+            }
+        }
+        
+    } catch (blobError) {
+        console.log('Blobs read error:', blobError.message);
+        // 继续尝试从虎皮椒API查询
+    }
+    
+    // 本地未找到，查询虎皮椒API
+    try {
         const time = Math.floor(Date.now() / 1000).toString();
         const nonce_str = crypto.randomBytes(16).toString('hex');
         
@@ -103,26 +127,18 @@ exports.handler = async function(event, context) {
 
         if (open_order_id && open_order_id !== '') {
             params.open_order_id = open_order_id;
-            console.log('Using open_order_id:', open_order_id);
         } else {
             params.out_trade_order = order_no;
-            console.log('Using out_trade_order:', order_no);
         }
 
-        console.log('Params before hash generation:', JSON.stringify(params));
-        
         const generatedHash = generateXhHash(params, APPSECRET);
-        
-        const finalParams = { ...params };
-        finalParams.hash = generatedHash;
+        params.hash = generatedHash;
 
-        const postData = Object.keys(finalParams).sort().map(key => {
-            return `${key}=${encodeURIComponent(finalParams[key])}`;
+        const postData = Object.keys(params).sort().map(key => {
+            return `${key}=${encodeURIComponent(params[key])}`;
         }).join('&');
 
-        console.log('=== Sending Request ===');
-        console.log('URL:', QUERY_URL);
-        console.log('Post Data:', postData);
+        console.log('Querying payment API...');
 
         const response = await fetch(QUERY_URL, {
             method: 'POST',
@@ -131,34 +147,63 @@ exports.handler = async function(event, context) {
             timeout: 15000
         });
 
-        console.log('Response status:', response.status);
         const text = await response.text();
-        console.log('Raw response:', text);
 
         try {
             const result = JSON.parse(text);
-            console.log('Parsed result:', JSON.stringify(result, null, 2));
 
             if (!result.errcode || result.errcode === 0 || result.errcode === '0') {
-                const status = result.data.status;
+                const status = result.data?.status || result.status;
                 if (status === 'OD' || status === 'PAID' || status === 'TRADE_SUCCESS') {
+                    // 支付成功，保存到 Blobs
+                    try {
+                        const store = await import('@netlify/blobs').then(m => m.getStore('payments'));
+                        const paymentData = {
+                            order_no: order_no,
+                            status: 'paid',
+                            amount: result.data?.total_fee || 990,
+                            paid_at: new Date().toISOString()
+                        };
+                        await store.set(order_no, JSON.stringify(paymentData));
+                        console.log('Payment saved to Blobs from API query');
+                    } catch (e) {
+                        console.log('Failed to save to Blobs:', e.message);
+                    }
+                    
                     return { 
                         statusCode: 200, 
                         headers, 
-                        body: JSON.stringify({ code: 0, paid: true, status: status, msg: "Payment confirmed" }) 
+                        body: JSON.stringify({ 
+                            code: 0, 
+                            paid: true, 
+                            status: 'paid',
+                            order_no: order_no,
+                            msg: "Payment confirmed by API" 
+                        }) 
                     };
                 } else {
                     return { 
                         statusCode: 200, 
                         headers, 
-                        body: JSON.stringify({ code: 0, paid: false, status: status, msg: "Order pending" }) 
+                        body: JSON.stringify({ 
+                            code: 0, 
+                            paid: false, 
+                            status: status || 'pending',
+                            order_no: order_no,
+                            msg: "Order pending" 
+                        }) 
                     };
                 }
             } else {
                 return { 
                     statusCode: 200, 
                     headers, 
-                    body: JSON.stringify({ code: result.errcode, paid: false, msg: result.errmsg || 'Error' }) 
+                    body: JSON.stringify({ 
+                        code: result.errcode, 
+                        paid: false, 
+                        order_no: order_no,
+                        msg: result.errmsg || 'Query error' 
+                    }) 
                 };
             }
         } catch (e) {
@@ -166,15 +211,25 @@ exports.handler = async function(event, context) {
             return { 
                 statusCode: 200, 
                 headers, 
-                body: JSON.stringify({ code: -2, paid: false, msg: 'Invalid response format' }) 
+                body: JSON.stringify({ 
+                    code: -2, 
+                    paid: false, 
+                    order_no: order_no,
+                    msg: 'Invalid API response' 
+                }) 
             };
         }
     } catch (error) {
-        console.error('Error:', error.message);
+        console.error('Query error:', error.message);
         return { 
             statusCode: 500, 
             headers, 
-            body: JSON.stringify({ code: -3, paid: false, msg: error.message }) 
+            body: JSON.stringify({ 
+                code: -3, 
+                paid: false, 
+                order_no: order_no,
+                msg: error.message 
+            }) 
         };
     }
 };

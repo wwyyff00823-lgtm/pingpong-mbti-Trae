@@ -1,7 +1,7 @@
 const personalityData = {
     'ESTP': { 
         name: '爆冲显眼包', 
-        emoji: '💥',
+        emoji: 'image/ESTP.png',
         traits: [
             '进攻执行力拉满，技术细节抠得极细，上手快、落点准。',
             '战术灵活不僵化，临场调整快，总能找到对手漏洞突破。',
@@ -18,7 +18,7 @@ const personalityData = {
                     '第四周：逆风局模拟，0:3开局追分，禁止盲目发力，要求每分先过渡一板再进攻，每天完成2次逆转'
                 ],
                 equipment: '推荐中等硬度七层纯木底板，兼顾支撑力和容错率，正手搭配39度左右粘性胶皮（国产品牌可选狂飚、银河系列，进口品牌可选蝴蝶罗泽娜、多尼克F1系列等），拍柄可适当加粗提升握持稳定性。',
-                partner: 'ISFJ 移动城墙互补逻辑：你主打前台进攻突破，搭档擅长后台稳防控制，双打搭配时攻防体系完整，你负责抢分、搭档负责兜底，容错率大幅提升。练球时搭档的沉稳能帮你收敛急躁冒进的毛病，你的冲劲也能带动搭档提升进攻意识，双方在技术风格和节奏性格上形成完美互补，共同进步效率最高。'
+                partner: 'ISTJ 学院老干部互补逻辑：你主打前台进攻突破，搭档擅长稳扎稳打执行标准动作，双打搭配时攻防体系完整，你负责抢分、搭档负责稳住节奏，容错率大幅提升。练球时搭档的规范性能帮你打磨动作框架，你的冲劲也能带动搭档提升进攻意识，双方在技术风格和节奏性格上形成完美互补，共同进步效率最高。'
             },
             mid: {
                 wow: '【WOW】进攻的核心不是单板质量，而是衔接速度，用70%力量保证连续两板进攻，比全力一板的得分率高30%。',
@@ -48,7 +48,7 @@ const personalityData = {
     },
     'ISTJ': { 
         name: '学院老干部', 
-        emoji: '📚',
+        emoji: 'image/ISTJ.png',
         traits: [
             '动作标准得像教练示范模版，半分不差，稳定性拉满。',
             '发球抢攻永远是固定流程，闭着眼都能走完整套动作。',
@@ -95,7 +95,7 @@ const personalityData = {
     },
     'ESFP': { 
         name: '球场大妖姬', 
-        emoji: '✨',
+        emoji: 'image/ESFP.png',
         traits: [
             '打球自带感染力，球馆气氛担当非他莫属。',
             '时不时打出神仙球救场，引得全场回头注目。',
@@ -142,7 +142,7 @@ const personalityData = {
     },
     'INFJ': { 
         name: '诡道战术家', 
-        emoji: '🎯',
+        emoji: 'image/INFJ.png',
         traits: [
             '球路比迷宫还绕，对手永远猜不到下一板往哪飞。',
             '发球转不转混着来，连对手都摸不清旋转规律。',
@@ -189,7 +189,7 @@ const personalityData = {
     },
     'INTJ': { 
         name: '脑力内卷王', 
-        emoji: '🧠',
+        emoji: 'image/INTJ.png',
         traits: [
             '打球像在下棋，落子前早算好了三步之后的套路。',
             '每颗球都带着明确战术目的，绝不瞎抡一板。',
@@ -236,7 +236,7 @@ const personalityData = {
     },
     'ISTP': { 
         name: '冷面闷葫芦', 
-        emoji: '❄️',
+        emoji: 'image/ISTP.png',
         traits: [
             '话少球狠，站在台前像尊没感情的防守机器。',
             '防回去的球落点很邪乎，对手拉十板能失误八板。',
@@ -283,7 +283,7 @@ const personalityData = {
     },
     'ISFJ': { 
         name: '移动城墙', 
-        emoji: '🛡️',
+        emoji: 'image/ISFJ.png',
         traits: [
             '防守密不透风，像给球台盖了层打不穿的城墙。',
             '永远先想着把球接回去，再琢磨怎么得分。',
@@ -330,7 +330,7 @@ const personalityData = {
     },
     'INFP': { 
         name: '躺平大师流', 
-        emoji: '😴',
+        emoji: 'image/INFP.png',
         traits: [
             '打球主打一个"养生"，抡胳膊都嫌累的那种。',
             '打球软乎乎的没啥威胁，但你也别想一板冲死他。',
@@ -377,7 +377,7 @@ const personalityData = {
     },
     'ENTJ': { 
         name: '球馆话事人', 
-        emoji: '👑',
+        emoji: 'image/ENTJ.png',
         traits: [
             '往球台前一站自带两米八气场，对手先怯三分。',
             '从发球到衔接全是他说了算，连搭档都得听他调度。',
@@ -424,7 +424,7 @@ const personalityData = {
     },
     'ENFJ': { 
         name: '社牛球王', 
-        emoji: '🎉',
+        emoji: 'image/ENFJ.png',
         traits: [
             '打球不忘唠嗑，对面是谁都能聊上两句。',
             '有人夸他两句，能超水平发挥连抡十板。',
@@ -471,7 +471,7 @@ const personalityData = {
     },
     'ENFP': { 
         name: '整活艺术家', 
-        emoji: '🎨',
+        emoji: 'image/ENFP.png',
         traits: [
             '打球全看心情，开心了能打出神仙球，不爽了连球都不接。',
             '时不时来个花活秀操作，哪怕失误了也自己乐半天。',
@@ -518,7 +518,7 @@ const personalityData = {
     },
     'ENTP': { 
         name: '杠精战术师', 
-        emoji: '⚡',
+        emoji: 'image/ENTP.png',
         traits: [
             '打球像在辩论，没开打先跟你掰扯三分钟战术。',
             '总爱抓你球路的漏洞，逮着机会就怼得你没话说。',
@@ -565,7 +565,7 @@ const personalityData = {
     },
     'ESFJ': { 
         name: '陪玩冤种', 
-        emoji: '🤝',
+        emoji: 'image/ESFJ.png',
         traits: [
             '打球不忘指导旁边新手，自己失误了先给别人道歉。',
             '领先了不好意思发力，怕对手没面子，硬生生把优势送没了。',
@@ -612,7 +612,7 @@ const personalityData = {
     },
     'ISFP': { 
         name: '乒乓弥勒佛', 
-        emoji: '😊',
+        emoji: 'image/ISFP.png',
         traits: [
             '动作飘逸得像在打太极，看着就赏心悦目。',
             '能不抡胳膊就不抡，能靠手感蹭过去的绝不发力。',
@@ -659,7 +659,7 @@ const personalityData = {
     },
     'INTP': { 
         name: '器宗传人', 
-        emoji: '🔧',
+        emoji: 'image/INTP.png',
         traits: [
             '聊起底板胶皮能说三天三夜，参数背得比教练还熟。',
             '拿着顶配器材，打出的球还不如百元入门拍的效果。',
@@ -706,7 +706,7 @@ const personalityData = {
     },
     'ESTJ': { 
         name: '乒乓教导主任', 
-        emoji: '📋',
+        emoji: 'image/ESTJ.png',
         traits: [
             '打球必须按流程来，热身没做完连球都不摸。',
             '对手不按套路出牌就慌，动作直接变形到妈都不认识。',

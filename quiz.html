@@ -226,7 +226,7 @@
             <div class="progress-bar">
                 <div class="progress-fill" id="progressFill"></div>
             </div>
-            <div class="progress-text" id="progressText">第 1/33 题</div>
+            <div class="progress-text" id="progressText">第 1/36 题</div>
         </div>
 
         <div class="question-section">
@@ -327,8 +327,8 @@
                 options: [
                     { id: 'q7_opt1', text: '复盘技术漏洞，回去针对性练', score: { T: 2 } },
                     { id: 'q7_opt2', text: '分析战术问题，下次调整打法', score: { T: 1 } },
-                    { id: 'q7_opt3', text: '今天状态不好，手感没在线', score: { F: 1 } },
-                    { id: 'q7_opt4', text: '场地光线太坑，打不顺很正常', score: { F: 2 } }
+                    { id: 'q7_opt3', text: '心情有点低落，先调整心态再说', score: { F: 1 } },
+                    { id: 'q7_opt4', text: '输了就输了，下次好好打就行', score: { F: 2 } }
                 ]
             },
             {
@@ -407,7 +407,7 @@
                     { id: 'q14_opt1', text: '按既定战术，挑打拧拉直接抢攻', score: { T: 2 } },
                     { id: 'q14_opt2', text: '拆解他的摆短习惯，针对性突破', score: { T: 1 } },
                     { id: 'q14_opt3', text: '跟着摆短比稳，找机会再上手', score: { F: 1 } },
-                    { id: 'q14_opt4', text: '捅长打乱节奏，怎么顺手怎么来', score: { F: 2 } }
+                    { id: 'q14_opt4', text: '凭感觉应对，怎么顺手怎么来', score: { F: 2 } }
                 ]
             },
             {
@@ -462,7 +462,7 @@
                     { id: 'q19_opt1', text: '战术套路，换一套方案打', score: { T: 2 } },
                     { id: 'q19_opt2', text: '技术动作，修正发力细节', score: { T: 1 } },
                     { id: 'q19_opt3', text: '心态节奏，告诉自己稳住', score: { F: 1 } },
-                    { id: 'q19_opt4', text: '器材胶皮，是不是没灌油', score: { F: 2 } }
+                    { id: 'q19_opt4', text: '放松心情，慢慢追分不着急', score: { F: 2 } }
                 ]
             },
             {
@@ -549,8 +549,8 @@
                 options: [
                     { id: 'q27_opt1', text: '精准压制，每一板都打到同一个点', score: { S: 2 } },
                     { id: 'q27_opt2', text: '按固定套路打，稳扎稳打', score: { S: 1 } },
-                    { id: 'q27_opt3', text: '变线结合，节奏变化', score: { N: 1 } },
-                    { id: 'q27_opt4', text: '怎么开心怎么打，随心而动', score: { N: 2 } }
+                    { id: 'q27_opt3', text: '变线结合，节奏变化找机会', score: { N: 1 } },
+                    { id: 'q27_opt4', text: '观察对手反应，灵活调整打法', score: { N: 2 } }
                 ]
             },
             {
@@ -560,8 +560,8 @@
                 options: [
                     { id: 'q28_opt1', text: '客观分析失误原因，讨论改进方法', score: { T: 2 } },
                     { id: 'q28_opt2', text: '理性接受安慰，总结问题', score: { T: 1 } },
-                    { id: 'q28_opt3', text: '情绪低落，需要时间平复', score: { F: 1 } },
-                    { id: 'q28_opt4', text: '觉得尴尬，不想说话', score: { F: 2 } }
+                    { id: 'q28_opt3', text: '感谢安慰，心里稍微好一点了', score: { F: 1 } },
+                    { id: 'q28_opt4', text: '有人安慰挺暖心的，继续加油', score: { F: 2 } }
                 ]
             },
             {
@@ -622,6 +622,39 @@
                     { id: 'q33_opt3', text: '战术框架更重要，细节可以灵活调整', score: { N: 1 } },
                     { id: 'q33_opt4', text: '整体感觉最重要，不用拘泥于细节', score: { N: 2 } }
                 ]
+            },
+            {
+                id: 'q34',
+                text: '训练时，你更喜欢哪种方式？',
+                dimension: 'SN',
+                options: [
+                    { id: 'q34_opt1', text: '分解动作，一个细节一个细节地抠', score: { S: 2 } },
+                    { id: 'q34_opt2', text: '先练框架，再逐步细化', score: { S: 1 } },
+                    { id: 'q34_opt3', text: '先练整体感觉，细节自然会到位', score: { N: 1 } },
+                    { id: 'q34_opt4', text: '凭直觉练，感觉对了就行', score: { N: 2 } }
+                ]
+            },
+            {
+                id: 'q35',
+                text: '比赛暂停时，你会怎么做？',
+                dimension: 'TF',
+                options: [
+                    { id: 'q35_opt1', text: '冷静分析对手弱点，制定对策', score: { T: 2 } },
+                    { id: 'q35_opt2', text: '总结刚才的失误，调整战术', score: { T: 1 } },
+                    { id: 'q35_opt3', text: '深呼吸放松，调整心态', score: { F: 1 } },
+                    { id: 'q35_opt4', text: '和队友聊聊天，缓解紧张', score: { F: 2 } }
+                ]
+            },
+            {
+                id: 'q36',
+                text: '练习新技术时，你的态度是？',
+                dimension: 'JP',
+                options: [
+                    { id: 'q36_opt1', text: '制定详细计划，按步骤学习', score: { J: 2 } },
+                    { id: 'q36_opt2', text: '有大致目标，按计划练习', score: { J: 1 } },
+                    { id: 'q36_opt3', text: '边练边看，根据感觉调整', score: { P: 1 } },
+                    { id: 'q36_opt4', text: '随心所欲，练到哪算哪', score: { P: 2 } }
+                ]
             }
         ];
 
@@ -631,11 +664,16 @@
         let dimensionScores = { E: 0, I: 0, S: 0, N: 0, T: 0, F: 0, J: 0, P: 0 };
         let currentSelections = {};
         
+        // 维度权重：让4个维度的满分量级一致（各9题）
+        // EI: 9题 × 2分 × 1.0 = 18分
+        // SN: 9题 × 2分 × 1.0 = 18分
+        // TF: 9题 × 2分 × 1.0 = 18分
+        // JP: 9题 × 2分 × 1.0 = 18分
         const DIMENSION_WEIGHTS = {
-            EI: { questions: 9, weight: 1.125 },
-            SN: { questions: 8, weight: 1.0 },
-            TF: { questions: 8, weight: 1.0 },
-            JP: { questions: 8, weight: 1.0 }
+            EI: { questions: 9, weight: 1.0 },
+            SN: { questions: 9, weight: 1.0 },
+            TF: { questions: 9, weight: 1.0 },
+            JP: { questions: 9, weight: 1.0 }
         };
 
         function shuffleArray(array) {
