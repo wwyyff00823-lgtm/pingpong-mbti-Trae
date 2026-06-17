@@ -655,7 +655,8 @@
             localStorage.setItem('answers', JSON.stringify(answers));
             
             const selectedOption = question.options.find(opt => opt.id === optionId);
-            if (selectedOption && selectedOption.score) {
+            // 效检测试题不参与维度计分
+            if (selectedOption && selectedOption.score && !question.validityCheck) {
                 Object.keys(selectedOption.score).forEach(key => {
                     dimensionScores[key] += selectedOption.score[key];
                 });
@@ -691,6 +692,7 @@
         function checkIntegrity() {
             let contradictionCount = 0;
             
+            // 第一组（E/I 维度）：Q5、Q29，检测激进/保守倾向是否一致
             const q5Answer = shuffledQuestions.find(q => q.id === 'q5');
             const q29Answer = shuffledQuestions.find(q => q.id === 'q29');
             
@@ -699,15 +701,19 @@
                 const q29Selected = q29Answer.options.find(opt => opt.id === answers['q29']);
                 
                 if (q5Selected && q29Selected) {
-                    const q5Aggressive = q5Selected.tendency === 'aggressive';
-                    const q29Conservative = q29Selected.tendency === 'conservative';
+                    // aggressive = E 倾向，conservative = I 倾向
+                    // 如果两题倾向不一致（一个E一个I），则矛盾
+                    const q5IsE = q5Selected.tendency === 'aggressive'; // E 倾向
+                    const q29IsE = q29Selected.tendency === 'aggressive'; // E 倾向
                     
-                    if (q5Aggressive && q29Conservative) {
+                    // 矛盾：Q5是E倾向但Q29是I倾向，或反过来
+                    if ((q5IsE && !q29IsE) || (!q5IsE && q29IsE)) {
                         contradictionCount++;
                     }
                 }
             }
             
+            // 第二组（J/P 维度）：Q11、Q30，检测计划/灵活倾向是否一致
             const q11Answer = shuffledQuestions.find(q => q.id === 'q11');
             const q30Answer = shuffledQuestions.find(q => q.id === 'q30');
             
@@ -716,10 +722,13 @@
                 const q30Selected = q30Answer.options.find(opt => opt.id === answers['q30']);
                 
                 if (q11Selected && q30Selected) {
-                    const q11Planned = q11Selected.tendency === 'planned';
-                    const q30Flexible = q30Selected.tendency === 'flexible';
+                    // planned = J 倾向，flexible = P 倾向
+                    // 如果两题倾向不一致（一个J一个P），则矛盾
+                    const q11IsJ = q11Selected.tendency === 'planned'; // J 倾向
+                    const q30IsJ = q30Selected.tendency === 'planned'; // J 倾向
                     
-                    if (q11Planned && q30Flexible) {
+                    // 矛盾：Q11是J倾向但Q30是P倾向，或反过来
+                    if ((q11IsJ && !q30IsJ) || (!q11IsJ && q30IsJ)) {
                         contradictionCount++;
                     }
                 }

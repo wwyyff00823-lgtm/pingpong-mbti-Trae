@@ -592,19 +592,7 @@
                 }
             } catch (error) {
                 console.error('Network error:', error);
-                const isMobileDevice = isMobile();
-                const fallbackUrl = isMobileDevice 
-                    ? `https://api.xunhupay.com/payment/test?order=${orderNo}`
-                    : `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent('PING_TEST_' + orderNo)}`;
-                return {
-                    success: true,
-                    orderNo: orderNo,
-                    openOrderId: '',
-                    qrCodeUrl: fallbackUrl,
-                    isMobile: isMobileDevice,
-                    expiresAt: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
-                    fallback: true
-                };
+                return { success: false, message: '创建订单失败，请重试' };
             }
         }
 
@@ -637,7 +625,7 @@
                     console.log('status:', data.status);
                     console.log('code:', data.code);
                     
-                    if (data.data.status === 'OD') {
+                    if (data.paid === true || data.status === 'paid' || data.status === 'OD' || data.status === 'PAID' || data.status === 'TRADE_SUCCESS') {
                         resolve({
                             success: true,
                             orderNo,
@@ -765,8 +753,11 @@
 
             unlockBtn.addEventListener('click', async () => {
                 const order = await createOrder();
-                if (order.success) {
-                    currentOrderNo = order.orderNo;
+                if (!order || !order.success) {
+                    alert(order?.message || '创建订单失败，请重试');
+                    return;
+                }
+                currentOrderNo = order.orderNo;
                     currentOpenOrderId = order.openOrderId || '';
                     currentPayUrl = order.payUrl;
                     orderNo.textContent = currentOrderNo;

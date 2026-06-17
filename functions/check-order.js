@@ -113,7 +113,7 @@ exports.handler = async function(event, context) {
             console.log('Parsed result:', JSON.stringify(result, null, 2));
 
             if (!result.errcode || result.errcode === 0 || result.errcode === '0') {
-                const status = result.status || result.trade_status;
+                const status = result.data.status;
                 if (status === 'OD' || status === 'PAID' || status === 'TRADE_SUCCESS') {
                     return { 
                         statusCode: 200, 
