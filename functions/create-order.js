@@ -2,23 +2,26 @@ const crypto = require('crypto');
 const qs = require('querystring');
 
 const API_URL = "https://api.xunhupay.com/payment/do.html";
-const API_URL_BACKUP = "https://api.dpweixin.com/payment/do.html";
+const API_URL_BACKUP = "https://api.xunhupay.com/payment/do.html";
 
-const APPID = "201906181673";
-const APPSECRET = "685ed8bb1d5468e8771aaee1109913c4";
+const APPID = process.env.XUNHUPAY_APPID || "201906181673";
+const APPSECRET = process.env.XUNHUPAY_APPSECRET || "685ed8bb1d5468e8771aaee1109913c4";
+const NOTIFY_URL = process.env.XUNHUPAY_NOTIFY_URL || "https://dapper-malabi-8f0543.netlify.app/.netlify/functions/notify";
+const RETURN_URL = process.env.XUNHUPAY_RETURN_URL || "https://dapper-malabi-8f0543.netlify.app/result.html";
 
 function generateXhHash(params, hashkey) {
-    const sortedKeys = Object.keys(params).sort();
-    let arg = '';
-    sortedKeys.forEach(key => {
-        const val = params[key];
-        if (key !== 'hash' && val !== null && val !== undefined && val !== '') {
-            if (arg) arg += '&';
-            arg += key + '=' + val;
-        }
-    });
-    arg += hashkey;
-    return crypto.createHash('md5').update(arg).digest('hex').toLowerCase();
+    const cleanParams = { ...params };
+    delete cleanParams.hash;
+    
+    const sortedKeys = Object.keys(cleanParams).filter(key => {
+        const val = cleanParams[key];
+        return val !== null && val !== undefined && val !== '' && val !== 'undefined';
+    }).sort();
+    
+    const arg = sortedKeys.map(key => `${key}=${String(cleanParams[key])}`).join('&');
+    const finalStr = arg + hashkey;
+    
+    return crypto.createHash('md5').update(finalStr).digest('hex').toLowerCase();
 }
 
 exports.handler = async function(event, context) {
@@ -62,8 +65,8 @@ exports.handler = async function(event, context) {
         total_fee: price,
         title: goods_name,
         time: time,
-        notify_url: protocol + "://" + domain + "/.netlify/functions/notify",
-        return_url: protocol + "://" + domain + "/result.html",
+        notify_url: NOTIFY_URL,
+        return_url: RETURN_URL,
         nonce_str: nonce_str
     };
 

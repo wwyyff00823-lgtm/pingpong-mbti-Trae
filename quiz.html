@@ -226,7 +226,7 @@
             <div class="progress-bar">
                 <div class="progress-fill" id="progressFill"></div>
             </div>
-            <div class="progress-text" id="progressText">第 1/30 题</div>
+            <div class="progress-text" id="progressText">第 1/33 题</div>
         </div>
 
         <div class="question-section">
@@ -259,8 +259,8 @@
                 options: [
                     { id: 'q1_opt1', text: '直接发奔球抢攻，第一板就给对手施压', score: { E: 2 } },
                     { id: 'q1_opt2', text: '发急长球逼退台，找机会正手上手', score: { E: 1 } },
-                    { id: 'q1_opt3', text: '发短球控网前，搓两板再找机会', score: { I: -1 } },
-                    { id: 'q1_opt4', text: '平稳摆短劈长，先稳上台不冒进', score: { I: -2 } }
+                    { id: 'q1_opt3', text: '发短球控网前，搓两板再找机会', score: { I: 1 } },
+                    { id: 'q1_opt4', text: '平稳摆短劈长，先稳上台不冒进', score: { I: 2 } }
                 ]
             },
             {
@@ -270,8 +270,8 @@
                 options: [
                     { id: 'q2_opt1', text: '每一个动作细节都要到位', score: { S: 2 } },
                     { id: 'q2_opt2', text: '落点精准度，必须打到指定的台内区域', score: { S: 1 } },
-                    { id: 'q2_opt3', text: '身体发力的整体流畅度，协调最重要', score: { N: -1 } },
-                    { id: 'q2_opt4', text: '击球的节奏变化，快慢结合找对手漏洞', score: { N: -2 } }
+                    { id: 'q2_opt3', text: '身体发力的整体流畅度，协调最重要', score: { N: 1 } },
+                    { id: 'q2_opt4', text: '击球的节奏变化，快慢结合找对手漏洞', score: { N: 2 } }
                 ]
             },
             {
@@ -281,8 +281,8 @@
                 options: [
                     { id: 'q3_opt1', text: '把一套发球练到极致，落点旋转精准可控', score: { S: 2 } },
                     { id: 'q3_opt2', text: '固定两三套发球，保证上台率和稳定性', score: { S: 1 } },
-                    { id: 'q3_opt3', text: '多练几套组合变化，发球自带战术目的', score: { N: -1 } },
-                    { id: 'q3_opt4', text: '怎么迷惑怎么来，让对手完全摸不清规律', score: { N: -2 } }
+                    { id: 'q3_opt3', text: '多练几套组合变化，发球自带战术目的', score: { N: 1 } },
+                    { id: 'q3_opt4', text: '怎么迷惑怎么来，让对手完全摸不清规律', score: { N: 2 } }
                 ]
             },
             {
@@ -292,8 +292,8 @@
                 options: [
                     { id: 'q4_opt1', text: '迎前快带反撕，主动对抗找机会', score: { E: 2 } },
                     { id: 'q4_opt2', text: '侧身让位反拉，正面硬刚对冲', score: { E: 1 } },
-                    { id: 'q4_opt3', text: '减力挡短卸力，稳防一板找机会', score: { I: -1 } },
-                    { id: 'q4_opt4', text: '退台稳防相持，靠连续防守等失误', score: { I: -2 } }
+                    { id: 'q4_opt3', text: '减力挡短卸力，稳防一板找机会', score: { I: 1 } },
+                    { id: 'q4_opt4', text: '退台稳防相持，靠连续防守等失误', score: { I: 2 } }
                 ]
             },
             {
@@ -305,8 +305,8 @@
                 options: [
                     { id: 'q5_opt1', text: '果断发抢，直接拿下这分', score: { E: 2 }, tendency: 'aggressive' },
                     { id: 'q5_opt2', text: '主动上手，争取抢先创造机会', score: { E: 1 }, tendency: 'aggressive' },
-                    { id: 'q5_opt3', text: '发稳一点，先保证上台不失误', score: { I: -1 }, tendency: 'conservative' },
-                    { id: 'q5_opt4', text: '控制为主，慢慢打多拍相持', score: { I: -2 }, tendency: 'conservative' }
+                    { id: 'q5_opt3', text: '发稳一点，先保证上台不失误', score: { I: 1 }, tendency: 'conservative' },
+                    { id: 'q5_opt4', text: '控制为主，慢慢打多拍相持', score: { I: 2 }, tendency: 'conservative' }
                 ]
             },
             {
@@ -316,8 +316,8 @@
                 options: [
                     { id: 'q6_opt1', text: '死死压住对手反手位，盯着薄弱点打', score: { T: 2 } },
                     { id: 'q6_opt2', text: '按既定战术变线，一步步调动对手', score: { T: 1 } },
-                    { id: 'q6_opt3', text: '跟着手感走，怎么舒服怎么拉', score: { F: -1 } },
-                    { id: 'q6_opt4', text: '跟着状态走，发力爽了最重要', score: { F: -2 } }
+                    { id: 'q6_opt3', text: '跟着手感走，怎么舒服怎么拉', score: { F: 1 } },
+                    { id: 'q6_opt4', text: '跟着状态走，发力爽了最重要', score: { F: 2 } }
                 ]
             },
             {
@@ -327,8 +327,8 @@
                 options: [
                     { id: 'q7_opt1', text: '复盘技术漏洞，回去针对性练', score: { T: 2 } },
                     { id: 'q7_opt2', text: '分析战术问题，下次调整打法', score: { T: 1 } },
-                    { id: 'q7_opt3', text: '今天状态不好，手感没在线', score: { F: -1 } },
-                    { id: 'q7_opt4', text: '场地光线太坑，打不顺很正常', score: { F: -2 } }
+                    { id: 'q7_opt3', text: '今天状态不好，手感没在线', score: { F: 1 } },
+                    { id: 'q7_opt4', text: '场地光线太坑，打不顺很正常', score: { F: 2 } }
                 ]
             },
             {
@@ -338,8 +338,8 @@
                 options: [
                     { id: 'q8_opt1', text: '必须的，跟高手打才能涨球', score: { E: 2 } },
                     { id: 'q8_opt2', text: '先看他打法，合适就上去切磋', score: { E: 1 } },
-                    { id: 'q8_opt3', text: '人家主动约再打，没必要凑上去', score: { I: -1 } },
-                    { id: 'q8_opt4', text: '默默看就行，打球不爱社交', score: { I: -2 } }
+                    { id: 'q8_opt3', text: '人家主动约再打，没必要凑上去', score: { I: 1 } },
+                    { id: 'q8_opt4', text: '默默看就行，打球不爱社交', score: { I: 2 } }
                 ]
             },
             {
@@ -349,8 +349,8 @@
                 options: [
                     { id: 'q9_opt1', text: '提前列好训练计划，按计划逐项完成', score: { J: 2 } },
                     { id: 'q9_opt2', text: '有固定的练球流程，按顺序来', score: { J: 1 } },
-                    { id: 'q9_opt3', text: '看当天状态，状态好多练会，不好就歇会', score: { P: -1 } },
-                    { id: 'q9_opt4', text: '随便打，打到哪算哪', score: { P: -2 } }
+                    { id: 'q9_opt3', text: '看当天状态，状态好多练会，不好就歇会', score: { P: 1 } },
+                    { id: 'q9_opt4', text: '随便打，打到哪算哪', score: { P: 2 } }
                 ]
             },
             {
@@ -360,8 +360,8 @@
                 options: [
                     { id: 'q10_opt1', text: '分析颗粒特点，总结旋转规律再打', score: { T: 2 } },
                     { id: 'q10_opt2', text: '制定针对性战术，按方案执行', score: { T: 1 } },
-                    { id: 'q10_opt3', text: '打几个找找手感，慢慢适应', score: { F: -1 } },
-                    { id: 'q10_opt4', text: '能打成什么样算什么样，随缘', score: { F: -2 } }
+                    { id: 'q10_opt3', text: '打几个找找手感，慢慢适应', score: { F: 1 } },
+                    { id: 'q10_opt4', text: '能打成什么样算什么样，随缘', score: { F: 2 } }
                 ]
             },
             {
@@ -373,8 +373,8 @@
                 options: [
                     { id: 'q11_opt1', text: '按数量练，必须连续20板不掉', score: { J: 2 }, tendency: 'planned' },
                     { id: 'q11_opt2', text: '按训练计划来，每组固定数量', score: { J: 1 }, tendency: 'planned' },
-                    { id: 'q11_opt3', text: '感觉好就多练几组，不好就歇会', score: { P: -1 }, tendency: 'flexible' },
-                    { id: 'q11_opt4', text: '练到舒服才最重要', score: { P: -2 }, tendency: 'flexible' }
+                    { id: 'q11_opt3', text: '感觉好就多练几组，不好就歇会', score: { P: 1 }, tendency: 'flexible' },
+                    { id: 'q11_opt4', text: '练到舒服才最重要', score: { P: 2 }, tendency: 'flexible' }
                 ]
             },
             {
@@ -384,8 +384,8 @@
                 options: [
                     { id: 'q12_opt1', text: '常规武器，出台必打的固定套路', score: { J: 2 } },
                     { id: 'q12_opt2', text: '备用战术，关键分时才拿出来', score: { J: 1 } },
-                    { id: 'q12_opt3', text: '看机会，没机会就先搓', score: { P: -1 } },
-                    { id: 'q12_opt4', text: '看手感，偶尔打出来能吓自己一跳', score: { P: -2 } }
+                    { id: 'q12_opt3', text: '看机会，没机会就先搓', score: { P: 1 } },
+                    { id: 'q12_opt4', text: '看手感，偶尔打出来能吓自己一跳', score: { P: 2 } }
                 ]
             },
             {
@@ -395,8 +395,8 @@
                 options: [
                     { id: 'q13_opt1', text: '必须看，抓死角发是固定流程', score: { J: 2 } },
                     { id: 'q13_opt2', text: '偶尔看，大部分时候按习惯发', score: { J: 1 } },
-                    { id: 'q13_opt3', text: '很少看，发完再随机调整', score: { P: -1 } },
-                    { id: 'q13_opt4', text: '从不看，凭感觉发最顺手', score: { P: -2 } }
+                    { id: 'q13_opt3', text: '很少看，发完再随机调整', score: { P: 1 } },
+                    { id: 'q13_opt4', text: '从不看，凭感觉发最顺手', score: { P: 2 } }
                 ]
             },
             {
@@ -406,8 +406,8 @@
                 options: [
                     { id: 'q14_opt1', text: '按既定战术，挑打拧拉直接抢攻', score: { T: 2 } },
                     { id: 'q14_opt2', text: '拆解他的摆短习惯，针对性突破', score: { T: 1 } },
-                    { id: 'q14_opt3', text: '跟着摆短比稳，找机会再上手', score: { F: -1 } },
-                    { id: 'q14_opt4', text: '捅长打乱节奏，怎么顺手怎么来', score: { F: -2 } }
+                    { id: 'q14_opt3', text: '跟着摆短比稳，找机会再上手', score: { F: 1 } },
+                    { id: 'q14_opt4', text: '捅长打乱节奏，怎么顺手怎么来', score: { F: 2 } }
                 ]
             },
             {
@@ -417,8 +417,8 @@
                 options: [
                     { id: 'q15_opt1', text: '卡位精准预判强，很少做无用跑动', score: { S: 2 } },
                     { id: 'q15_opt2', text: '碎步调整稳重心，步步都到位', score: { S: 1 } },
-                    { id: 'q15_opt3', text: '动态调整节奏快，大范围跑动应变', score: { N: -1 } },
-                    { id: 'q15_opt4', text: '无法步步到位，但偶尔有神级扑救', score: { N: -2 } }
+                    { id: 'q15_opt3', text: '动态调整节奏快，大范围跑动应变', score: { N: 1 } },
+                    { id: 'q15_opt4', text: '无法步步到位，但偶尔有神级扑救', score: { N: 2 } }
                 ]
             },
             {
@@ -428,8 +428,8 @@
                 options: [
                     { id: 'q16_opt1', text: '按固定套路打，拉冲结合找机会', score: { J: 2 } },
                     { id: 'q16_opt2', text: '提前定好战术，耐心按节奏磨', score: { J: 1 } },
-                    { id: 'q16_opt3', text: '打打看调整，随时变战术节奏', score: { P: -1 } },
-                    { id: 'q16_opt4', text: '怎么开心怎么打，赢输无所谓', score: { P: -2 } }
+                    { id: 'q16_opt3', text: '打打看调整，随时变战术节奏', score: { P: 1 } },
+                    { id: 'q16_opt4', text: '怎么开心怎么打，赢输无所谓', score: { P: 2 } }
                 ]
             },
             {
@@ -439,8 +439,8 @@
                 options: [
                     { id: 'q17_opt1', text: '教科书级，动作标准卡位准', score: { S: 2 } },
                     { id: 'q17_opt2', text: '实用型，虽然不好看但能到位', score: { S: 1 } },
-                    { id: 'q17_opt3', text: '节奏型，靠预判省体力', score: { N: -1 } },
-                    { id: 'q17_opt4', text: '随缘型，基本靠手够脚懒得动', score: { N: -2 } }
+                    { id: 'q17_opt3', text: '节奏型，靠预判省体力', score: { N: 1 } },
+                    { id: 'q17_opt4', text: '随缘型，基本靠手够脚懒得动', score: { N: 2 } }
                 ]
             },
             {
@@ -450,8 +450,8 @@
                 options: [
                     { id: 'q18_opt1', text: '果断发抢，搏一分算一分', score: { E: 2 } },
                     { id: 'q18_opt2', text: '主动上手，争取追平分差', score: { E: 1 } },
-                    { id: 'q18_opt3', text: '先稳上台，别主动送分', score: { I: -1 } },
-                    { id: 'q18_opt4', text: '放慢节奏，拖到关键分再说', score: { I: -2 } }
+                    { id: 'q18_opt3', text: '先稳上台，别主动送分', score: { I: 1 } },
+                    { id: 'q18_opt4', text: '放慢节奏，拖到关键分再说', score: { I: 2 } }
                 ]
             },
             {
@@ -461,8 +461,8 @@
                 options: [
                     { id: 'q19_opt1', text: '战术套路，换一套方案打', score: { T: 2 } },
                     { id: 'q19_opt2', text: '技术动作，修正发力细节', score: { T: 1 } },
-                    { id: 'q19_opt3', text: '心态节奏，告诉自己稳住', score: { F: -1 } },
-                    { id: 'q19_opt4', text: '器材胶皮，是不是没灌油', score: { F: -2 } }
+                    { id: 'q19_opt3', text: '心态节奏，告诉自己稳住', score: { F: 1 } },
+                    { id: 'q19_opt4', text: '器材胶皮，是不是没灌油', score: { F: 2 } }
                 ]
             },
             {
@@ -472,8 +472,8 @@
                 options: [
                     { id: 'q20_opt1', text: '死磕多球，把动作练成肌肉记忆', score: { S: 2 } },
                     { id: 'q20_opt2', text: '把一套技术练精，一招鲜吃遍天', score: { S: 1 } },
-                    { id: 'q20_opt3', text: '多尝试新战术，丰富打法体系', score: { N: -1 } },
-                    { id: 'q20_opt4', text: '多打实战，跟着感觉自然涨球', score: { N: -2 } }
+                    { id: 'q20_opt3', text: '多尝试新战术，丰富打法体系', score: { N: 1 } },
+                    { id: 'q20_opt4', text: '多打实战，跟着感觉自然涨球', score: { N: 2 } }
                 ]
             },
             {
@@ -483,8 +483,8 @@
                 options: [
                     { id: 'q21_opt1', text: '按部就班，流程到位就不会输', score: { J: 2 } },
                     { id: 'q21_opt2', text: '计划清晰，赛前预案做足', score: { J: 1 } },
-                    { id: 'q21_opt3', text: '随机应变，场上怎么顺怎么来', score: { P: -1 } },
-                    { id: 'q21_opt4', text: '随心所欲，开心打球最重要', score: { P: -2 } }
+                    { id: 'q21_opt3', text: '随机应变，场上怎么顺怎么来', score: { P: 1 } },
+                    { id: 'q21_opt4', text: '随心所欲，开心打球最重要', score: { P: 2 } }
                 ]
             },
             {
@@ -494,8 +494,8 @@
                 options: [
                     { id: 'q22_opt1', text: '上台率，十个球能接回八个', score: { T: 2 } },
                     { id: 'q22_opt2', text: '动作规范性，框架标准才专业', score: { T: 1 } },
-                    { id: 'q22_opt3', text: '手感舒适度，打起来舒服最重要', score: { F: -1 } },
-                    { id: 'q22_opt4', text: '快乐指数，开心最重要', score: { F: -2 } }
+                    { id: 'q22_opt3', text: '手感舒适度，打起来舒服最重要', score: { F: 1 } },
+                    { id: 'q22_opt4', text: '快乐指数，开心最重要', score: { F: 2 } }
                 ]
             },
             {
@@ -505,8 +505,8 @@
                 options: [
                     { id: 'q23_opt1', text: '坚决不给正手，锁死反手位', score: { T: 2 } },
                     { id: 'q23_opt2', text: '搓长逼反手，让他侧身失误', score: { T: 1 } },
-                    { id: 'q23_opt3', text: '退台对拉，跟着手感硬碰硬', score: { F: -1 } },
-                    { id: 'q23_opt4', text: '放高球磨，耗到他没耐心', score: { F: -2 } }
+                    { id: 'q23_opt3', text: '退台对拉，跟着手感硬碰硬', score: { F: 1 } },
+                    { id: 'q23_opt4', text: '放高球磨，耗到他没耐心', score: { F: 2 } }
                 ]
             },
             {
@@ -516,8 +516,8 @@
                 options: [
                     { id: 'q24_opt1', text: '走，复盘去！找高手请教问题在哪', score: { E: 2 } },
                     { id: 'q24_opt2', text: '正手位漏了，回去得练步伐', score: { E: 1 } },
-                    { id: 'q24_opt3', text: '今天没睡醒，状态太差了', score: { I: -1 } },
-                    { id: 'q24_opt4', text: '算了就是玩，回家休息', score: { I: -2 } }
+                    { id: 'q24_opt3', text: '今天没睡醒，状态太差了', score: { I: 1 } },
+                    { id: 'q24_opt4', text: '算了就是玩，回家休息', score: { I: 2 } }
                 ]
             },
             {
@@ -527,8 +527,8 @@
                 options: [
                     { id: 'q25_opt1', text: '发球抢攻，直接结束比赛', score: { E: 2 } },
                     { id: 'q25_opt2', text: '主动创造机会，上手得分', score: { E: 1 } },
-                    { id: 'q25_opt3', text: '发稳球，别送赛点', score: { I: -1 } },
-                    { id: 'q25_opt4', text: '控制节奏，稳扎稳打', score: { I: -2 } }
+                    { id: 'q25_opt3', text: '发稳球，别送赛点', score: { I: 1 } },
+                    { id: 'q25_opt4', text: '控制节奏，稳扎稳打', score: { I: 2 } }
                 ]
             },
             {
@@ -538,8 +538,8 @@
                 options: [
                     { id: 'q26_opt1', text: '手指微调，精准控制弧线落点', score: { S: 2 } },
                     { id: 'q26_opt2', text: '动作标准，按固定框架接', score: { S: 1 } },
-                    { id: 'q26_opt3', text: '重心交换，靠整体发力接', score: { N: -1 } },
-                    { id: 'q26_opt4', text: '身体直觉，跟着感觉接就行', score: { N: -2 } }
+                    { id: 'q26_opt3', text: '重心交换，靠整体发力接', score: { N: 1 } },
+                    { id: 'q26_opt4', text: '身体直觉，跟着感觉接就行', score: { N: 2 } }
                 ]
             },
             {
@@ -549,8 +549,8 @@
                 options: [
                     { id: 'q27_opt1', text: '精准压制，每一板都打到同一个点', score: { S: 2 } },
                     { id: 'q27_opt2', text: '按固定套路打，稳扎稳打', score: { S: 1 } },
-                    { id: 'q27_opt3', text: '变线结合，节奏变化', score: { N: -1 } },
-                    { id: 'q27_opt4', text: '怎么开心怎么打，随心而动', score: { N: -2 } }
+                    { id: 'q27_opt3', text: '变线结合，节奏变化', score: { N: 1 } },
+                    { id: 'q27_opt4', text: '怎么开心怎么打，随心而动', score: { N: 2 } }
                 ]
             },
             {
@@ -560,8 +560,8 @@
                 options: [
                     { id: 'q28_opt1', text: '客观分析失误原因，讨论改进方法', score: { T: 2 } },
                     { id: 'q28_opt2', text: '理性接受安慰，总结问题', score: { T: 1 } },
-                    { id: 'q28_opt3', text: '情绪低落，需要时间平复', score: { F: -1 } },
-                    { id: 'q28_opt4', text: '觉得尴尬，不想说话', score: { F: -2 } }
+                    { id: 'q28_opt3', text: '情绪低落，需要时间平复', score: { F: 1 } },
+                    { id: 'q28_opt4', text: '觉得尴尬，不想说话', score: { F: 2 } }
                 ]
             },
             {
@@ -573,8 +573,8 @@
                 options: [
                     { id: 'q29_opt1', text: '直接抢攻，跟他对搏', score: { E: 2 }, tendency: 'aggressive' },
                     { id: 'q29_opt2', text: '积极上手，争取主动', score: { E: 1 }, tendency: 'aggressive' },
-                    { id: 'q29_opt3', text: '先稳一板过渡，不冒险', score: { I: -1 }, tendency: 'conservative' },
-                    { id: 'q29_opt4', text: '稳健接发，打相持找机会', score: { I: -2 }, tendency: 'conservative' }
+                    { id: 'q29_opt3', text: '先稳一板过渡，不冒险', score: { I: 1 }, tendency: 'conservative' },
+                    { id: 'q29_opt4', text: '稳健接发，打相持找机会', score: { I: 2 }, tendency: 'conservative' }
                 ]
             },
             {
@@ -586,8 +586,8 @@
                 options: [
                     { id: 'q30_opt1', text: '制定详细战术方案，写在纸上', score: { J: 2 }, tendency: 'planned' },
                     { id: 'q30_opt2', text: '想象可能遇到的场景，在脑子里过一遍', score: { J: 1 }, tendency: 'planned' },
-                    { id: 'q30_opt3', text: '放松心态，顺其自然', score: { P: -1 }, tendency: 'flexible' },
-                    { id: 'q30_opt4', text: '该干嘛干嘛，比赛当天再看情况', score: { P: -2 }, tendency: 'flexible' }
+                    { id: 'q30_opt3', text: '放松心态，顺其自然', score: { P: 1 }, tendency: 'flexible' },
+                    { id: 'q30_opt4', text: '该干嘛干嘛，比赛当天再看情况', score: { P: 2 }, tendency: 'flexible' }
                 ]
             },
             {
@@ -597,8 +597,8 @@
                 options: [
                     { id: 'q31_opt1', text: '当然报名，比赛是检验水平的好机会', score: { E: 2 } },
                     { id: 'q31_opt2', text: '看时间安排，有空就参加', score: { E: 1 } },
-                    { id: 'q31_opt3', text: '不太想参加，更喜欢自己练', score: { I: -1 } },
-                    { id: 'q31_opt4', text: '坚决不参加，比赛压力太大', score: { I: -2 } }
+                    { id: 'q31_opt3', text: '不太想参加，更喜欢自己练', score: { I: 1 } },
+                    { id: 'q31_opt4', text: '坚决不参加，比赛压力太大', score: { I: 2 } }
                 ]
             },
             {
@@ -608,19 +608,19 @@
                 options: [
                     { id: 'q32_opt1', text: '会，计划好每天练什么，严格执行', score: { J: 2 } },
                     { id: 'q32_opt2', text: '有大致计划，基本能完成', score: { J: 1 } },
-                    { id: 'q32_opt3', text: '偶尔计划，看心情执行', score: { P: -1 } },
-                    { id: 'q32_opt4', text: '从不计划，想练就练', score: { P: -2 } }
+                    { id: 'q32_opt3', text: '偶尔计划，看心情执行', score: { P: 1 } },
+                    { id: 'q32_opt4', text: '从不计划，想练就练', score: { P: 2 } }
                 ]
             },
             {
                 id: 'q33',
-                text: '比赛中叫暂停时，你会？',
-                dimension: 'JP',
+                text: '你如何看待技术细节与整体战术的关系？',
+                dimension: 'SN',
                 options: [
-                    { id: 'q33_opt1', text: '快速布置战术，明确下一阶段打法', score: { J: 2 } },
-                    { id: 'q33_opt2', text: '擦汗喝水，简单调整心态', score: { J: 1 } },
-                    { id: 'q33_opt3', text: '随便走走，让身体休息', score: { P: -1 } },
-                    { id: 'q33_opt4', text: '不想叫暂停，觉得没必要', score: { P: -2 } }
+                    { id: 'q33_opt1', text: '技术细节决定一切，每个动作都要标准', score: { S: 2 } },
+                    { id: 'q33_opt2', text: '细节很重要，但要服务于整体战术', score: { S: 1 } },
+                    { id: 'q33_opt3', text: '战术框架更重要，细节可以灵活调整', score: { N: 1 } },
+                    { id: 'q33_opt4', text: '整体感觉最重要，不用拘泥于细节', score: { N: 2 } }
                 ]
             }
         ];
@@ -629,6 +629,14 @@
         let shuffledQuestions = [];
         let answers = {};
         let dimensionScores = { E: 0, I: 0, S: 0, N: 0, T: 0, F: 0, J: 0, P: 0 };
+        let currentSelections = {};
+        
+        const DIMENSION_WEIGHTS = {
+            EI: { questions: 9, weight: 1.125 },
+            SN: { questions: 8, weight: 1.0 },
+            TF: { questions: 8, weight: 1.0 },
+            JP: { questions: 8, weight: 1.0 }
+        };
 
         function shuffleArray(array) {
             const arr = [...array];
@@ -649,9 +657,31 @@
             const savedAnswers = localStorage.getItem('answers');
             if (savedAnswers) {
                 answers = JSON.parse(savedAnswers);
+                // 重新计算分数
+                recalculateScores();
             }
             
             renderQuestion();
+        }
+        
+        function recalculateScores() {
+            dimensionScores = { E: 0, I: 0, S: 0, N: 0, T: 0, F: 0, J: 0, P: 0 };
+            currentSelections = {};
+            
+            shuffledQuestions.forEach(question => {
+                if (answers[question.id]) {
+                    const selectedOption = question.options.find(opt => opt.id === answers[question.id]);
+                    if (selectedOption && selectedOption.score) {
+                        const weight = DIMENSION_WEIGHTS[question.dimension]?.weight || 1.0;
+                        Object.keys(selectedOption.score).forEach(key => {
+                            if (dimensionScores[key] !== undefined) {
+                                dimensionScores[key] += selectedOption.score[key] * weight;
+                            }
+                        });
+                        currentSelections[question.id] = answers[question.id];
+                    }
+                }
+            });
         }
 
         function renderQuestion() {
@@ -684,15 +714,28 @@
 
         function selectOption(optionId) {
             const question = shuffledQuestions[currentIndex];
+            const weight = DIMENSION_WEIGHTS[question.dimension]?.weight || 1.0;
+            
+            if (currentSelections[question.id]) {
+                const oldOption = question.options.find(opt => opt.id === currentSelections[question.id]);
+                if (oldOption && oldOption.score) {
+                    Object.keys(oldOption.score).forEach(key => {
+                        if (dimensionScores[key] !== undefined) {
+                            dimensionScores[key] -= oldOption.score[key] * weight;
+                        }
+                    });
+                }
+            }
+            
             answers[question.id] = optionId;
+            currentSelections[question.id] = optionId;
             localStorage.setItem('answers', JSON.stringify(answers));
             
             const selectedOption = question.options.find(opt => opt.id === optionId);
-            // 效检测试题不参与维度计分
-            if (selectedOption && selectedOption.score && !question.validityCheck) {
+            if (selectedOption && selectedOption.score) {
                 Object.keys(selectedOption.score).forEach(key => {
                     if (dimensionScores[key] !== undefined) {
-                        dimensionScores[key] += selectedOption.score[key];
+                        dimensionScores[key] += selectedOption.score[key] * weight;
                     }
                 });
             }
@@ -773,17 +816,22 @@
         }
 
         function calculateMBTI() {
-            // 比较每个维度的两个对立面得分
             const EI = dimensionScores.E - dimensionScores.I;
             const SN = dimensionScores.S - dimensionScores.N;
             const TF = dimensionScores.T - dimensionScores.F;
             const JP = dimensionScores.J - dimensionScores.P;
             
+            function getLetter(positive, negative, diff) {
+                if (diff > 0) return positive;
+                if (diff < 0) return negative;
+                return Math.random() >= 0.5 ? positive : negative;
+            }
+            
             const mbti = 
-                (EI > 0 ? 'E' : 'I') +
-                (SN > 0 ? 'S' : 'N') +
-                (TF > 0 ? 'T' : 'F') +
-                (JP > 0 ? 'J' : 'P');
+                getLetter('E', 'I', EI) +
+                getLetter('S', 'N', SN) +
+                getLetter('T', 'F', TF) +
+                getLetter('J', 'P', JP);
             
             return mbti;
         }

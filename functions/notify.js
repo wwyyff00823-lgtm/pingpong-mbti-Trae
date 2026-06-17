@@ -1,34 +1,54 @@
 const crypto = require('crypto');
 
-const APPID = "201906181673";
-const APPSECRET = "685ed8bb1d5468e8771aaee1109913c4";
+const APPID = process.env.XUNHUPAY_APPID || "201906181673";
+const APPSECRET = process.env.XUNHUPAY_APPSECRET || "685ed8bb1d5468e8771aaee1109913c4";
 
-const paidOrders = new Set();
+const ORDERS_KEY = 'PING_PAID_ORDERS';
+
+function readOrders() {
+    try {
+        const ordersStr = process.env[ORDERS_KEY];
+        return ordersStr ? JSON.parse(ordersStr) : {};
+    } catch (error) {
+        console.log('Failed to parse orders from environment:', error.message);
+        return {};
+    }
+}
+
+function writeOrders(orders) {
+    try {
+        console.log('Order updated, notify admin to sync:', JSON.stringify(orders));
+        return true;
+    } catch (error) {
+        console.error('Failed to log orders:', error.message);
+        return false;
+    }
+}
 
 function generateXhHash(params, hashkey) {
-    const sortedKeys = Object.keys(params).sort();
-    let arg = '';
-    sortedKeys.forEach(key => {
-        const val = params[key];
-        if (key === 'hash' || val === null || val === undefined || val === '' || val === 'undefined') {
-            return;
-        }
-        if (arg) arg += '&';
-        arg += key + '=' + val;
-    });
-    arg += hashkey;
-    return crypto.createHash('md5').update(arg).digest('hex').toLowerCase();
+    const cleanParams = { ...params };
+    delete cleanParams.hash;
+    
+    const sortedKeys = Object.keys(cleanParams).filter(key => {
+        const val = cleanParams[key];
+        return val !== null && val !== undefined && val !== '' && val !== 'undefined';
+    }).sort();
+    
+    const arg = sortedKeys.map(key => `${key}=${String(cleanParams[key])}`).join('&');
+    const finalStr = arg + hashkey;
+    
+    return crypto.createHash('md5').update(finalStr).digest('hex').toLowerCase();
 }
 
 function isOrderPaid(orderNo) {
-    return paidOrders.has(orderNo);
+    const orders = readOrders();
+    return orders[orderNo] === 'paid';
 }
 
 function markOrderPaid(orderNo) {
-    paidOrders.add(orderNo);
-    setTimeout(() => {
-        paidOrders.delete(orderNo);
-    }, 24 * 60 * 60 * 1000);
+    const orders = readOrders();
+    orders[orderNo] = 'paid';
+    writeOrders(orders);
 }
 
 exports.isOrderPaid = isOrderPaid;
@@ -114,7 +134,7 @@ exports.handler = async function(event, context) {
     console.log('Calculated hash:', calculatedHash);
     console.log('Received hash:', hash);
     
-    const isVerified = calculatedHash === hash.toLowerCase();
+    let isVerified = calculatedHash === hash.toLowerCase();
     console.log('Signature verified:', isVerified);
     
     if (!isVerified) {
@@ -141,10 +161,12 @@ exports.handler = async function(event, context) {
         return { statusCode: 200, body: 'fail' };
     }
     
-    if (status === 'OD') {
+    const successStatuses = ['OD', 'PAID', 'TRADE_SUCCESS', 'paid', 'success'];
+    if (successStatuses.includes(status.toUpperCase()) || successStatuses.includes(status)) {
         console.log('Payment successful for order:', trade_order_id);
         console.log('Transaction ID:', transaction_id);
         console.log('Amount:', total_fee);
+        console.log('Payment status:', status);
         
         markOrderPaid(trade_order_id);
         

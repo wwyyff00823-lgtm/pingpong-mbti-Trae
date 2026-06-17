@@ -322,6 +322,26 @@
             border-radius: 12px;
             margin: 0 auto;
         }
+        .save-qr-btn {
+            display: none;
+            width: 100%;
+            padding: 12px;
+            margin-top: 12px;
+            background: #f5f5f5;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            color: #666;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .save-qr-btn:hover {
+            background: #eee;
+            border-color: #ccc;
+        }
+        .save-qr-btn.show {
+            display: block;
+        }
         .order-info {
             background: #f8f9fa;
             border-radius: 12px;
@@ -470,6 +490,7 @@
             <div class="modal-title">扫码支付</div>
             <div class="qr-code-container">
                 <img id="qrCode" class="qr-code" src="" alt="支付二维码">
+                <button class="save-qr-btn" id="saveQrBtn" style="display:none;">保存二维码到相册</button>
             </div>
             <div class="order-info">
                 <div class="order-row">
@@ -481,7 +502,7 @@
                     <span class="order-value amount-value">¥9.9</span>
                 </div>
             </div>
-            <div class="modal-hint">请使用微信或支付宝扫码支付<br/>支付成功后将自动解锁报告</div>
+            <div class="modal-hint" id="paymentHint">请使用微信或支付宝扫码支付<br/>支付成功后将自动解锁报告</div>
             <button class="modal-btn" id="checkPaymentBtn">已支付，点击验证</button>
             <button class="modal-btn cancel" id="cancelPaymentBtn">取消支付</button>
         </div>
@@ -574,15 +595,17 @@
                     })
                 });
                 const data = await response.json();
+                console.log('Create order response:', JSON.stringify(data, null, 2));
                 if (data.code === 0) {
                     const isMobileDevice = isMobile();
-                    const payUrl = isMobileDevice ? data.url : data.url_qrcode;
+                    const qrCodeUrl = data.url_qrcode || data.pay_url || data.url;
+                    const mobileUrl = data.url || data.pay_url || data.url_qrcode;
                     return {
                         success: true,
-                        orderNo: data.order_no,
-                        openOrderId: data.open_order_id || '',
-                        qrCodeUrl: payUrl || data.pay_url,
-                        payUrl: data.url,
+                        orderNo: orderNo,
+                        openOrderId: data.open_order_id || data.openid || '',
+                        qrCodeUrl: qrCodeUrl,
+                        payUrl: mobileUrl,
                         isMobile: isMobileDevice,
                         expiresAt: new Date(Date.now() + 30 * 60 * 1000).toISOString()
                     };
@@ -592,18 +615,9 @@
                 }
             } catch (error) {
                 console.error('Network error:', error);
-                const isMobileDevice = isMobile();
-                const fallbackUrl = isMobileDevice 
-                    ? `https://api.xunhupay.com/payment/test?order=${orderNo}`
-                    : `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent('PING_TEST_' + orderNo)}`;
                 return {
-                    success: true,
-                    orderNo: orderNo,
-                    openOrderId: '',
-                    qrCodeUrl: fallbackUrl,
-                    isMobile: isMobileDevice,
-                    expiresAt: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
-                    fallback: true
+                    success: false,
+                    message: '网络错误，无法连接支付服务器'
                 };
             }
         }
@@ -691,12 +705,39 @@
             const orderNo = document.getElementById('orderNo');
             const checkPaymentBtn = document.getElementById('checkPaymentBtn');
             const cancelPaymentBtn = document.getElementById('cancelPaymentBtn');
+            const saveQrBtn = document.getElementById('saveQrBtn');
+            const paymentHint = document.getElementById('paymentHint');
 
             let currentOrderNo = '';
             let currentOpenOrderId = '';
             let pollInterval = null;
             let currentPayUrl = '';
             let modalOpenedAt = 0;
+
+            async function saveQrCode() {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                const img = document.getElementById('qrCode');
+                
+                canvas.width = img.width;
+                canvas.height = img.height;
+                ctx.drawImage(img, 0, 0);
+                
+                try {
+                    const link = document.createElement('a');
+                    link.download = 'payment_qrcode.png';
+                    link.href = canvas.toDataURL('image/png');
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    showToast('二维码已保存到相册');
+                } catch (error) {
+                    console.error('Save QR code error:', error);
+                    showToast('保存失败，请手动截图');
+                }
+            }
+
+            saveQrBtn.addEventListener('click', saveQrCode);
 
             function stopPolling() {
                 if (pollInterval) {
@@ -725,6 +766,7 @@
                 paymentModal.classList.remove('show');
                 checkingModal.classList.remove('show');
                 document.getElementById('unlockSection').style.display = 'none';
+                renderReport(userLevel);
                 document.getElementById('reportSection').classList.add('show');
                 savePaymentConfirmed();
                 showToast('支付成功！');
@@ -782,20 +824,26 @@
                         return;
                     }
                     
-                    if (order.isMobile && currentPayUrl) {
-                        qrCode.style.display = 'none';
+                    if (order.isMobile) {
+                        qrCode.style.display = 'block';
+                        qrCode.src = order.qrCodeUrl;
+                        saveQrBtn.style.display = 'block';
+                        paymentHint.textContent = '长按二维码识别支付，或点击下方按钮保存到相册';
+                        
                         const existingBtn = document.querySelector('.mobile-pay-btn');
                         if (existingBtn) existingBtn.remove();
                         const linkBtn = document.createElement('a');
                         linkBtn.href = currentPayUrl;
                         linkBtn.target = '_blank';
                         linkBtn.className = 'mobile-pay-btn';
-                        linkBtn.textContent = '点击跳转支付';
+                        linkBtn.textContent = '保存二维码到相册';
                         linkBtn.style.cssText = 'display:block;width:100%;height:56px;line-height:56px;background:#c41e3a;color:#fff;border-radius:12px;font-weight:bold;font-size:18px;text-decoration:none;margin-top:10px;';
                         qrCode.parentNode.appendChild(linkBtn);
                     } else {
                         qrCode.style.display = 'block';
                         qrCode.src = order.qrCodeUrl;
+                        saveQrBtn.style.display = 'none';
+                        paymentHint.textContent = '请使用微信或支付宝扫码支付\n支付成功后将自动解锁报告';
                     }
                     
                     paymentModal.classList.add('show');

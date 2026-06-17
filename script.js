@@ -8,6 +8,13 @@ const STORAGE_KEYS = {
     ORDER_NO: 'currentOrderNo'
 };
 
+const DIMENSION_WEIGHTS = {
+    EI: { questions: 9, weight: 1.125 },
+    SN: { questions: 8, weight: 1.0 },
+    TF: { questions: 8, weight: 1.0 },
+    JP: { questions: 8, weight: 1.0 }
+};
+
 function generateUserId() {
     let userId = localStorage.getItem(STORAGE_KEYS.USER_ID);
     if (!userId) {
@@ -81,85 +88,73 @@ function shuffleArray(array) {
     return arr;
 }
 
-function checkAnswerConsistency(answers) {
-    const q5 = answers[4];
-    const q25 = answers[24];
+function checkAnswerConsistency(answers, questions) {
+    let contradictionCount = 0;
     
-    if (!q5 || !q25) return true;
+    const q5 = questions ? questions.find(q => q.id === 'q5') : null;
+    const q29 = questions ? questions.find(q => q.id === 'q29') : null;
     
-    const q5Radical = q5.includes('激进') || q5.includes('搏杀') || q5.includes('主动进攻');
-    const q25Conservative = q25.includes('保守') || q25.includes('稳') || q25.includes('防守');
+    if (q5 && q29 && answers['q5'] && answers['q29']) {
+        const q5Selected = q5.options.find(opt => opt.id === answers['q5']);
+        const q29Selected = q29.options.find(opt => opt.id === answers['q29']);
+        
+        if (q5Selected && q29Selected) {
+            const q5IsE = q5Selected.tendency === 'aggressive';
+            const q29IsE = q29Selected.tendency === 'aggressive';
+            
+            if ((q5IsE && !q29IsE) || (!q5IsE && q29IsE)) {
+                contradictionCount++;
+            }
+        }
+    }
     
-    return !(q5Radical && q25Conservative);
+    const q11 = questions ? questions.find(q => q.id === 'q11') : null;
+    const q30 = questions ? questions.find(q => q.id === 'q30') : null;
+    
+    if (q11 && q30 && answers['q11'] && answers['q30']) {
+        const q11Selected = q11.options.find(opt => opt.id === answers['q11']);
+        const q30Selected = q30.options.find(opt => opt.id === answers['q30']);
+        
+        if (q11Selected && q30Selected) {
+            const q11IsJ = q11Selected.tendency === 'planned';
+            const q30IsJ = q30Selected.tendency === 'planned';
+            
+            if ((q11IsJ && !q30IsJ) || (!q11IsJ && q30IsJ)) {
+                contradictionCount++;
+            }
+        }
+    }
+    
+    return contradictionCount < 2;
 }
 
-function calculateMBTI(answers) {
-    let eScore = 0, iScore = 0;
-    let sScore = 0, nScore = 0;
-    let tScore = 0, fScore = 0;
-    let jScore = 0, pScore = 0;
-
-    const scoringMap = {
-        0: { e: ['A', 'B'], i: ['C', 'D'] },
-        1: { e: ['A', 'B'], i: ['C', 'D'] },
-        2: { s: ['A', 'B'], n: ['C', 'D'] },
-        3: { s: ['A', 'B'], n: ['C', 'D'] },
-        4: { t: ['A', 'B'], f: ['C', 'D'] },
-        5: { t: ['A', 'B'], f: ['C', 'D'] },
-        6: { j: ['A', 'B'], p: ['C', 'D'] },
-        7: { j: ['A', 'B'], p: ['C', 'D'] },
-        8: { e: ['B', 'C'], i: ['A', 'D'] },
-        9: { e: ['B', 'C'], i: ['A', 'D'] },
-        10: { s: ['B', 'C'], n: ['A', 'D'] },
-        11: { s: ['B', 'C'], n: ['A', 'D'] },
-        12: { t: ['B', 'C'], f: ['A', 'D'] },
-        13: { t: ['B', 'C'], f: ['A', 'D'] },
-        14: { j: ['B', 'C'], p: ['A', 'D'] },
-        15: { j: ['B', 'C'], p: ['A', 'D'] },
-        16: { e: ['C', 'D'], i: ['A', 'B'] },
-        17: { e: ['C', 'D'], i: ['A', 'B'] },
-        18: { s: ['C', 'D'], n: ['A', 'B'] },
-        19: { s: ['C', 'D'], n: ['A', 'B'] },
-        20: { t: ['C', 'D'], f: ['A', 'B'] },
-        21: { t: ['C', 'D'], f: ['A', 'B'] },
-        22: { j: ['C', 'D'], p: ['A', 'B'] },
-        23: { j: ['C', 'D'], p: ['A', 'B'] },
-        24: { e: ['A', 'D'], i: ['B', 'C'] },
-        25: { s: ['A', 'D'], n: ['B', 'C'] },
-        26: { t: ['A', 'D'], f: ['B', 'C'] },
-        27: { j: ['A', 'D'], p: ['B', 'C'] },
-        28: { e: ['B', 'D'], i: ['A', 'C'] },
-        29: { s: ['B', 'D'], n: ['A', 'C'] }
-    };
-
-    answers.forEach((answer, index) => {
-        if (!answer) return;
-        const key = index % 30;
-        const map = scoringMap[key];
-        if (!map) return;
-        
-        const option = answer.charAt(0);
-        Object.keys(map).forEach(dim => {
-            if (map[dim].includes(option)) {
-                if (dim === 'e') eScore++;
-                else if (dim === 'i') iScore++;
-                else if (dim === 's') sScore++;
-                else if (dim === 'n') nScore++;
-                else if (dim === 't') tScore++;
-                else if (dim === 'f') fScore++;
-                else if (dim === 'j') jScore++;
-                else if (dim === 'p') pScore++;
-            }
-        });
-    });
-
-    const mbti = 
-        (eScore >= iScore ? 'E' : 'I') +
-        (sScore >= nScore ? 'S' : 'N') +
-        (tScore >= fScore ? 'T' : 'F') +
-        (jScore >= pScore ? 'J' : 'P');
-
-    return mbti;
+function calculateMBTI(dimensionScores) {
+    if (!dimensionScores) {
+        const savedScores = localStorage.getItem('dimensionScores');
+        if (savedScores) {
+            dimensionScores = JSON.parse(savedScores);
+        } else {
+            dimensionScores = { E: 0, I: 0, S: 0, N: 0, T: 0, F: 0, J: 0, P: 0 };
+        }
+    }
+    
+    const EI = dimensionScores.E - dimensionScores.I;
+    const SN = dimensionScores.S - dimensionScores.N;
+    const TF = dimensionScores.T - dimensionScores.F;
+    const JP = dimensionScores.J - dimensionScores.P;
+    
+    function getLetter(positive, negative, diff) {
+        if (diff > 0) return positive;
+        if (diff < 0) return negative;
+        return Math.random() >= 0.5 ? positive : negative;
+    }
+    
+    return (
+        getLetter('E', 'I', EI) +
+        getLetter('S', 'N', SN) +
+        getLetter('T', 'F', TF) +
+        getLetter('J', 'P', JP)
+    );
 }
 
 function canSkipPayment(mbtiType) {
@@ -176,6 +171,7 @@ function resetTest() {
     localStorage.removeItem(STORAGE_KEYS.MBTI_TYPE);
     localStorage.removeItem(STORAGE_KEYS.INTEGRITY_SCORE);
     localStorage.removeItem(STORAGE_KEYS.ORDER_NO);
+    localStorage.removeItem(STORAGE_KEYS.DIMENSION_SCORES);
 }
 
 window.PING = {

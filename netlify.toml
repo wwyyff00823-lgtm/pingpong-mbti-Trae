@@ -11,3 +11,11 @@
   for = "/*"
   [headers.values]
     Access-Control-Allow-Origin = "*"
+
+[context.production]
+  [context.production.environment]
+    XUNHUPAY_APPID = "your_app_id_here"
+    XUNHUPAY_APPSECRET = "your_app_secret_here"
+    XUNHUPAY_NOTIFY_URL = "https://your-domain.netlify.app/.netlify/functions/notify"
+    XUNHUPAY_RETURN_URL = "https://your-domain.netlify.app/result.html"
+    PING_PAID_ORDERS = "{}"

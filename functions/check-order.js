@@ -1,8 +1,25 @@
 const crypto = require('crypto');
 
-const APPID = "201906181673";
-const APPSECRET = "685ed8bb1d5468e8771aaee1109913c4";
+const APPID = process.env.XUNHUPAY_APPID || "201906181673";
+const APPSECRET = process.env.XUNHUPAY_APPSECRET || "685ed8bb1d5468e8771aaee1109913c4";
 const QUERY_URL = "https://api.xunhupay.com/payment/query.html";
+
+const ORDERS_KEY = 'PING_PAID_ORDERS';
+
+function readOrders() {
+    try {
+        const ordersStr = process.env[ORDERS_KEY];
+        return ordersStr ? JSON.parse(ordersStr) : {};
+    } catch (error) {
+        console.log('Failed to parse orders from environment:', error.message);
+        return {};
+    }
+}
+
+function isOrderPaid(orderNo) {
+    const orders = readOrders();
+    return orders[orderNo] === 'paid';
+}
 
 function generateXhHash(params, hashkey) {
     const cleanParams = { ...params };
@@ -65,6 +82,16 @@ exports.handler = async function(event, context) {
     console.log('Open Order ID:', open_order_id);
     
     try {
+        const localPaid = isOrderPaid(order_no);
+        if (localPaid) {
+            console.log('Order found in local paid list');
+            return { 
+                statusCode: 200, 
+                headers, 
+                body: JSON.stringify({ code: 0, paid: true, status: 'paid', msg: "Payment confirmed locally" }) 
+            };
+        }
+
         const time = Math.floor(Date.now() / 1000).toString();
         const nonce_str = crypto.randomBytes(16).toString('hex');
         
