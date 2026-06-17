@@ -4,10 +4,10 @@ const qs = require('querystring');
 const API_URL = "https://api.xunhupay.com/payment/do.html";
 const API_URL_BACKUP = "https://api.xunhupay.com/payment/do.html";
 
-const APPID = process.env.XUNHUPAY_APPID || "201906181673";
-const APPSECRET = process.env.XUNHUPAY_APPSECRET || "685ed8bb1d5468e8771aaee1109913c4";
-const NOTIFY_URL = process.env.XUNHUPAY_NOTIFY_URL || "https://dapper-malabi-8f0543.netlify.app/.netlify/functions/notify";
-const RETURN_URL = process.env.XUNHUPAY_RETURN_URL || "https://dapper-malabi-8f0543.netlify.app/result.html";
+const APPID = process.env.XUNHUPAY_APPID;
+const APPSECRET = process.env.XUNHUPAY_APPSECRET;
+const NOTIFY_URL = process.env.XUNHUPAY_NOTIFY_URL;
+const RETURN_URL = process.env.XUNHUPAY_RETURN_URL;
 
 function generateXhHash(params, hashkey) {
     const cleanParams = { ...params };

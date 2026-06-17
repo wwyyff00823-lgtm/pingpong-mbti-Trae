@@ -1,7 +1,7 @@
 const crypto = require('crypto');
 
-const APPID = process.env.XUNHUPAY_APPID || "201906181673";
-const APPSECRET = process.env.XUNHUPAY_APPSECRET || "685ed8bb1d5468e8771aaee1109913c4";
+const APPID = process.env.XUNHUPAY_APPID;
+const APPSECRET = process.env.XUNHUPAY_APPSECRET;
 const QUERY_URL = "https://api.xunhupay.com/payment/query.html";
 
 const ORDERS_KEY = 'PING_PAID_ORDERS';
