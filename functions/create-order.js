@@ -12,7 +12,6 @@ const RETURN_URL = process.env.XUNHUPAY_RETURN_URL;
 
 // 服务端硬编码配置（防止客户端伪造）
 const PRICE_YUAN = 9.9;  // 价格：9.9元
-const PRICE_CENTS = Math.round(PRICE_YUAN * 100);  // 虎皮椒要求单位为"分"，即990
 const GOODS_NAME = '乒乓球MBTI测试完整报告';
 
 function generateXhHash(params, hashkey) {
@@ -85,7 +84,7 @@ exports.handler = async function(event, context) {
         version: "1.1",
         appid: APPID,
         trade_order_id: order_no,
-        total_fee: PRICE_CENTS.toString(),  // 服务端硬编码金额（单位：分）
+        total_fee: PRICE_YUAN.toString(),  // 服务端硬编码金额（单位：元）
         title: GOODS_NAME,  // 服务端硬编码商品名
         time: time,
         notify_url: NOTIFY_URL,
@@ -98,15 +97,20 @@ exports.handler = async function(event, context) {
 
     const postData = qs.stringify(params);
 
-    console.log('Creating order:', order_no, 'Amount:', PRICE_CENTS, 'cents');
+    console.log('Creating order:', order_no, 'Amount:', PRICE_YUAN, 'yuan');
+
+    // 用 AbortController 实现真超时（Node 18+ 全局 fetch 不支持 timeout 字段）
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
 
     try {
         const response = await fetch(API_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
             body: postData,
-            timeout: 10000
+            signal: controller.signal
         });
+        clearTimeout(timeoutId);
         
         const raw = await response.text();
         console.log('Payment API response status:', response.status);

@@ -126,23 +126,29 @@ exports.handler = async function(event, context) {
             await store.set(trade_order_id, JSON.stringify(paymentData));
             console.log('Payment saved to Netlify Blobs');
             
-            // 从订单号解析 userId、MBTI 和 Level（格式：PING + timestamp + random + MBTI + LEVEL + userId前8位）
-            if (trade_order_id.length >= 26) {
+            // 从订单号解析 userId、MBTI 和 Level（格式：PING + timestamp(13) + random(8) + MBTI(4) + level(1) + userId(8)）
+            // 总长度 = 4 + 13 + 8 + 4 + 1 + 8 = 38
+            if (trade_order_id.length >= 38) {
                 const mbtiPart = trade_order_id.substring(trade_order_id.length - 13, trade_order_id.length - 9);
-                const levelPart = trade_order_id.substring(trade_order_id.length - 9, trade_order_id.length - 8);
+                const levelShort = trade_order_id.substring(trade_order_id.length - 9, trade_order_id.length - 8);
                 const userIdPart = trade_order_id.substring(trade_order_id.length - 8);
-                const userPaymentKey = `paid_${userIdPart}_${mbtiPart}_${levelPart}`;
+                // 订单号中的 1 字符 level 简写映射为完整字符串
+                const levelMap = { 'L': 'low', 'M': 'mid', 'H': 'high' };
+                const levelFull = levelMap[levelShort] || 'mid';
+                const userPaymentKey = `paid_${userIdPart}_${mbtiPart}_${levelFull}`;
                 
-                // 存储用户支付记录（绑定userId）
+                // 存储用户支付记录（绑定 userId + MBTI + 完整 level）
                 await store.set(userPaymentKey, JSON.stringify({
                     paid: true,
                     order_no: trade_order_id,
                     user_id: userIdPart,
                     mbti_type: mbtiPart,
-                    user_level: levelPart,
+                    user_level: levelFull,
                     paid_at: new Date().toISOString()
                 }));
                 console.log('User payment record saved:', userPaymentKey);
+            } else {
+                console.warn('Order ID length unexpected, skip user payment record:', trade_order_id.length);
             }
             
         } catch (blobError) {

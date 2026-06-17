@@ -399,27 +399,6 @@
             background: #e8e8e8;
             box-shadow: none;
         }
-        .modal-btn.wechat-btn {
-            background: linear-gradient(135deg, #07c160 0%, #10b981 100%);
-            margin-top: 0;
-            margin-bottom: 10px;
-        }
-        .modal-btn.wechat-btn:hover {
-            box-shadow: 0 6px 20px rgba(7, 193, 96, 0.45);
-        }
-        .modal-btn.alipay-btn {
-            background: linear-gradient(135deg, #1677ff 0%, #3b82f6 100%);
-            margin-top: 0;
-        }
-        .modal-btn.alipay-btn:hover {
-            box-shadow: 0 6px 20px rgba(22, 119, 255, 0.45);
-        }
-        .pay-buttons {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            margin-bottom: 16px;
-        }
         .checking-payment {
             text-align: center;
             padding: 20px;
@@ -518,13 +497,10 @@
             <div class="modal-title">扫码支付 ¥9.9</div>
             <div class="qr-code-container">
                 <img id="qrCode" class="qr-code" src="" alt="支付二维码">
-                <div class="qr-hint" id="qrHint">请长按识别二维码，或保存二维码到相册，用微信/支付宝“扫一扫”选择相册完成扫码支付</div>
+                <div class="qr-hint" id="qrHint">请使用微信/支付宝【扫一扫】→【从相册选择二维码】完成支付。苹果手机用户可点击下方按钮保存二维码到相册。</div>
                 <button class="save-qr-btn" id="saveQrBtn">保存二维码到相册</button>
             </div>
-            <div class="pay-buttons" id="payButtons" style="display: none;">
-                <button class="modal-btn wechat-btn" id="wechatPayBtn">🔵 微信支付</button>
-                <button class="modal-btn alipay-btn" id="alipayPayBtn">🟡 支付宝支付</button>
-            </div>
+
             <div class="order-info">
                 <div class="order-row">
                     <span class="order-label">订单号</span>
@@ -575,20 +551,40 @@
 
             document.getElementById('mbtiType').textContent = mbtiType;
             document.getElementById('personalityName').textContent = personality.name;
-            
+
+            // 渲染人格头像：优先加载 image/<TYPE>.png，加载失败回退 emoji
             const emojiEl = document.getElementById('personalityEmoji');
+            // 先清空容器，初始默认显示 🏓（让用户知道"加载中"）
+            emojiEl.innerHTML = '';
+            emojiEl.textContent = '🏓';
+
             if (personality.emoji && personality.emoji.match(/\.(png|jpg|jpeg|gif|webp)$/i)) {
-                const img = document.createElement('img');
-                img.src = personality.emoji;
+                // 在 image 加载完成前，保留 emoji 作为占位
+                const placeholderText = emojiEl.textContent;
+
+                const img = new Image();
                 img.alt = personality.name;
-                img.onerror = function() {
-                    // 图片加载失败时显示默认emoji
-                    emojiEl.textContent = '🏓';
-                    img.remove();
+                img.loading = 'lazy';
+                img.decoding = 'async';
+                img.style.width = '120px';
+                img.style.height = '120px';
+                img.style.objectFit = 'contain';
+
+                img.onload = function() {
+                    // 图片加载成功：替换 emoji 为图片
+                    emojiEl.textContent = '';
+                    emojiEl.appendChild(img);
                 };
-                emojiEl.textContent = '';
-                emojiEl.appendChild(img);
+                img.onerror = function() {
+                    // 图片加载失败（网络问题/路径错误）：保留默认 🏓
+                    console.warn('Personality image failed to load:', personality.emoji);
+                    emojiEl.textContent = placeholderText;
+                };
+
+                // 显式设置 src 触发加载
+                img.src = personality.emoji;
             } else {
+                // data.js 中存的是 emoji 文本（如 🏓），直接显示
                 emojiEl.textContent = personality.emoji || '🏓';
             }
 
@@ -638,40 +634,41 @@
             return (/android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent.toLowerCase()));
         }
 
-        // 检查是否已为当前MBTI类型支付过（相同MBTI类型免支付）
-        function hasPaidForMBTI() {
-            const paidMbtis = localStorage.getItem('paidMbtis');
-            if (paidMbtis) {
-                const paidList = JSON.parse(paidMbtis);
-                return paidList.includes(mbtiType);
+        // 从服务端校验当前 userId + mbtiType + userLevel 是否已支付
+        // 关键：完全依赖服务端权威结果，不读 localStorage.paidMbtis（防止客户端绕过）
+        async function checkServerPaidStatus() {
+            try {
+                const userId = localStorage.getItem('userId');
+                if (!userId) return false;
+                const response = await fetch('/.netlify/functions/check-order', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        order_no: '',           // 留空，让服务端按 userId+mbtiType+userLevel 查询
+                        open_order_id: '',
+                        mbtiType: mbtiType,
+                        userLevel: userLevel,
+                        userId: userId,
+                        onlyUserRecord: true     // 仅查用户支付记录，不查具体订单
+                    })
+                });
+                const data = await response.json();
+                return data.paid === true || data.status === 'paid';
+            } catch (error) {
+                console.error('Check server paid status error:', error);
+                return false;
             }
-            return false;
         }
 
-        // 记录已支付的MBTI类型
-        function markMbtiAsPaid() {
-            const paidMbtis = localStorage.getItem('paidMbtis');
-            const paidList = paidMbtis ? JSON.parse(paidMbtis) : [];
-            if (!paidList.includes(mbtiType)) {
-                paidList.push(mbtiType);
-                localStorage.setItem('paidMbtis', JSON.stringify(paidList));
-            }
-        }
-
-        // 服务端验证支付状态
+        // 服务端验证具体订单的支付状态
         async function checkPaymentStatus(orderNo, openOrderId = '') {
-            // 如果已为当前MBTI类型支付过，直接返回成功
-            if (hasPaidForMBTI()) {
-                return true;
-            }
-            
             try {
                 const userId = localStorage.getItem('userId');
                 const response = await fetch('/.netlify/functions/check-order', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        order_no: orderNo, 
+                    body: JSON.stringify({
+                        order_no: orderNo,
                         open_order_id: openOrderId,
                         mbtiType: mbtiType,
                         userLevel: userLevel,
@@ -679,10 +676,6 @@
                     })
                 });
                 const data = await response.json();
-                // 如果支付成功，记录MBTI类型
-                if (data.paid === true || data.status === 'paid') {
-                    markMbtiAsPaid();
-                }
                 return data.paid === true || data.status === 'paid';
             } catch (error) {
                 console.error('Check payment error:', error);
@@ -734,11 +727,16 @@
 
             renderPersonality();
 
-            // 检查是否已为当前MBTI类型支付过，如果是则直接显示完整报告
-            if (hasPaidForMBTI()) {
+            // 启动时仅显示"免费预览"部分（人格名 + 头像 + 三个 trait）
+            // 是否已支付必须调用服务端确认，不能由客户端 localStorage 决定
+            const paidFromServer = await checkServerPaidStatus();
+            if (paidFromServer) {
                 document.getElementById('unlockSection').style.display = 'none';
                 document.getElementById('reportSection').classList.add('show');
                 renderReport(userLevel);
+            } else {
+                document.getElementById('unlockSection').style.display = 'block';
+                document.getElementById('reportSection').classList.remove('show');
             }
 
             const unlockBtn = document.getElementById('unlockBtn');
@@ -755,7 +753,6 @@
 
             let currentOrderNo = '';
             let currentOpenOrderId = '';
-            let currentPayUrl = '';
             let pollInterval = null;
             let pollCount = 0;
 
@@ -775,96 +772,63 @@
                 showToast('支付成功！报告已解锁');
             }
 
-            // 保存二维码（改进移动端兼容性）
+            // 保存二维码到相册（适配 iOS / 安卓 / PC）
             async function saveQrCode() {
+                const img = document.getElementById('qrCode');
+                if (!img || !img.src) {
+                    showToast('二维码尚未生成，请稍后再试');
+                    return;
+                }
+
+                // 统一提示语：iOS 走"长按保存"路径，安卓/PC 走"自动下载"
+                if (isMobile() && /iphone|ipad|ipod/i.test(navigator.userAgent.toLowerCase())) {
+                    // iOS：微信/浏览器直接触发 download 会被拦截，这里直接用 a[download] 尝试
+                    // iOS Safari 13+ 已支持 <a download>，但跨域图床仍会被拦截
+                    // 兜底：告知用户在弹窗里的图片上"长按 → 存储图像"
+                    showToast('iPhone 用户：请长按上方二维码图片 → 选择"存储图像"');
+                    return;
+                }
+
                 try {
-                    const img = document.getElementById('qrCode');
-                    
-                    // 对于 iOS Safari，使用 canvas 绘制并提示长按保存
-                    if (isMobile() && /iphone|ipad|ipod/i.test(navigator.userAgent.toLowerCase())) {
-                        const canvas = document.createElement('canvas');
-                        canvas.width = 200;
-                        canvas.height = 200;
-                        const ctx = canvas.getContext('2d');
-                        
-                        const qrImg = new Image();
-                        qrImg.crossOrigin = 'anonymous';
-                        
-                        await new Promise((resolve, reject) => {
-                            qrImg.onload = resolve;
-                            qrImg.onerror = reject;
-                            qrImg.src = img.src;
-                        });
-                        
-                        ctx.drawImage(qrImg, 0, 0, 200, 200);
-                        
-                        // 创建一个临时页面显示图片，方便用户长按保存
-                        const tempPage = `
-                            <!DOCTYPE html>
-                            <html>
-                            <head>
-                                <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                                <title>支付二维码</title>
-                                <style>
-                                    body { margin: 0; padding: 20px; background: #fff; text-align: center; }
-                                    img { max-width: 100%; height: auto; border-radius: 12px; }
-                                    p { margin-top: 20px; color: #666; font-size: 14px; }
-                                </style>
-                            </head>
-                            <body>
-                                <img src="${canvas.toDataURL('image/png')}" alt="支付二维码">
-                                <p>长按图片保存到相册</p>
-                            </body>
-                            </html>
-                        `;
-                        
-                        const blob = new Blob([tempPage], { type: 'text/html' });
-                        const url = URL.createObjectURL(blob);
-                        window.open(url, '_blank');
-                        showToast('请在新窗口长按图片保存');
-                    } else {
-                        // 其他设备：直接下载
-                        const response = await fetch(img.src);
-                        const blob = await response.blob();
-                        const url = URL.createObjectURL(blob);
-                        const link = document.createElement('a');
-                        link.href = url;
-                        link.download = 'MBTI_payment_qrcode.png';
-                        
-                        document.body.appendChild(link);
-                        link.click();
-                        document.body.removeChild(link);
-                        URL.revokeObjectURL(url);
-                        showToast('二维码已保存到相册');
-                    }
+                    // 尝试通过 fetch + blob 下载（PC / 大部分安卓浏览器可用）
+                    const response = await fetch(img.src, { mode: 'cors' });
+                    if (!response.ok) throw new Error('fetch failed');
+                    const blob = await response.blob();
+                    const url = URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = `MBTI_pay_qr_${currentOrderNo || Date.now()}.png`;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    setTimeout(() => URL.revokeObjectURL(url), 1000);
+                    showToast('二维码已下载，请打开微信扫一扫 → 相册 → 选该图片');
                 } catch (error) {
-                    console.error('Save QR error:', error);
-                    // 备用方案：提示用户手动截图
-                    showToast('保存失败，请手动截图保存二维码');
+                    // 跨域失败（虎皮椒图床可能未配 CORS）：兜底为新窗口展示
+                    console.warn('Download QR failed, fallback to new tab:', error);
+                    const newWindow = window.open('', '_blank');
+                    if (newWindow) {
+                        newWindow.document.write(`
+                            <!DOCTYPE html><html><head><meta charset="UTF-8">
+                            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                            <title>支付二维码</title>
+                            <style>body{margin:0;padding:24px;background:#fff;text-align:center;font-family:"PingFang SC","Microsoft YaHei",sans-serif;}
+                            img{max-width:100%;height:auto;border-radius:12px;box-shadow:0 4px 16px rgba(0,0,0,0.1);}
+                            p{margin-top:16px;color:#666;font-size:14px;line-height:1.6;}</style>
+                            </head><body>
+                            <img src="${img.src}" alt="支付二维码">
+                            <p>安卓/iPad 用户：长按图片 → 保存到相册<br>电脑端：右键图片 → 图片另存为</p>
+                            </body></html>
+                        `);
+                        newWindow.document.close();
+                        showToast('请在新窗口中保存二维码');
+                    } else {
+                        showToast('保存失败，请手动截屏保存二维码');
+                    }
                 }
             }
 
             saveQrBtn.addEventListener('click', saveQrCode);
-
-            // 微信支付按钮点击
-            document.getElementById('wechatPayBtn').addEventListener('click', () => {
-                if (currentPayUrl) {
-                    // 尝试唤醒微信支付
-                    const wechatUrl = `weixin://pay?url=${encodeURIComponent(currentPayUrl)}`;
-                    window.location.href = wechatUrl;
-                    showToast('正在打开微信支付...');
-                }
-            });
-
-            // 支付宝支付按钮点击
-            document.getElementById('alipayPayBtn').addEventListener('click', () => {
-                if (currentPayUrl) {
-                    // 尝试唤醒支付宝支付
-                    const alipayUrl = `alipays://platformapi/startapp?appId=20000056&url=${encodeURIComponent(currentPayUrl)}`;
-                    window.location.href = alipayUrl;
-                    showToast('正在打开支付宝支付...');
-                }
-            });
 
             // 点击解锁按钮
             unlockBtn.addEventListener('click', async () => {
@@ -882,19 +846,9 @@
                     // 显示二维码
                     qrCode.src = order.qrCodeUrl;
                     
-                    // 保存支付链接（用于跳转）
-                    currentPayUrl = order.payUrl || order.url || '';
-                    
-                    // 更新提示文字
-                    qrHint.innerHTML = '请长按识别二维码，或保存二维码到相册，用微信/支付宝“扫一扫”选择相册完成扫码支付';
+                    // 更新提示文字（明确路径：长按识别对 url_qrcode 无效）
+                    qrHint.innerHTML = '请使用微信/支付宝【扫一扫】→【从相册选择二维码】完成支付。苹果手机用户请点下方按钮保存到相册后操作。';
                     saveQrBtn.style.display = 'block';
-                    
-                    // 如果有支付链接，显示微信/支付宝跳转按钮
-                    if (currentPayUrl) {
-                        document.getElementById('payButtons').style.display = 'flex';
-                    } else {
-                        document.getElementById('payButtons').style.display = 'none';
-                    }
                     
                     paymentModal.classList.add('show');
                     pollCount = 0;
@@ -1032,6 +986,9 @@
             cancelPaymentBtn.addEventListener('click', () => {
                 stopPolling();
                 paymentModal.classList.remove('show');
+                // 清空当前订单上下文，避免下一次点"立刻付款"时残留旧值
+                currentOrderNo = '';
+                currentOpenOrderId = '';
             });
 
             // 重新测试
