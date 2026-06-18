@@ -718,8 +718,8 @@
                 
                 // 使用UTF-8编码数据
                 const data = textToBinary(text);
-                if (!data || data.length > 256) {
-                    console.error('Data too long or encoding failed');
+                if (!data || data.length > 512) {
+                    console.error('Data too long or encoding failed:', text.length, 'chars');
                     return null;
                 }
                 
@@ -944,7 +944,7 @@
             }
         }
 
-        // 生成二维码图片（优先使用QRCode.js库，失败则使用备用方案）
+        // 生成二维码图片（支持多种QRCode库API）
         async function generateQRCode(text) {
             const qrCodeEl = document.getElementById('qrCode');
             if (!qrCodeEl || !text) {
@@ -955,9 +955,9 @@
             // 清空之前的内容
             qrCodeEl.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:200px;color:#999;font-size:14px;">正在生成二维码...</div>';
             
-            try {
-                // 优先使用QRCode.js库
-                if (typeof QRCode !== 'undefined') {
+            // 尝试方案1: qrcode@1.x 的 toCanvas API
+            if (typeof QRCode !== 'undefined' && typeof QRCode.toCanvas === 'function') {
+                try {
                     const canvas = document.createElement('canvas');
                     canvas.style.width = '200px';
                     canvas.style.height = '200px';
@@ -973,19 +973,38 @@
                     
                     qrCodeEl.innerHTML = '';
                     qrCodeEl.appendChild(canvas);
-                    console.log('QR code generated with QRCode.js');
+                    console.log('QR code generated with QRCode.toCanvas');
                     return;
+                } catch (error) {
+                    console.error('QRCode.toCanvas failed:', error);
                 }
-            } catch (error) {
-                console.error('QRCode.js generation error, falling back to simple generator:', error);
             }
             
-            // 备用方案：使用简单的QR码生成器
+            // 尝试方案2: qrcodejs 库的 new QRCode() 构造函数
+            if (typeof QRCode !== 'undefined' && typeof QRCode === 'function') {
+                try {
+                    qrCodeEl.innerHTML = '';
+                    new QRCode(qrCodeEl, {
+                        text: text,
+                        width: 200,
+                        height: 200,
+                        colorDark: '#000000',
+                        colorLight: '#ffffff',
+                        correctLevel: QRCode.CorrectLevel.L
+                    });
+                    console.log('QR code generated with new QRCode()');
+                    return;
+                } catch (error) {
+                    console.error('new QRCode() failed:', error);
+                }
+            }
+            
+            // 备用方案3: 使用内置的简单QR码生成器
             const simpleCanvas = generateSimpleQRCode(text, 200);
             if (simpleCanvas) {
                 qrCodeEl.innerHTML = '';
                 qrCodeEl.appendChild(simpleCanvas);
-                console.log('QR code generated with simple generator');
+                console.log('QR code generated with built-in generator');
                 return;
             }
             
@@ -1025,10 +1044,8 @@
             // 默认显示备用 emoji
             emojiEl.textContent = fallbackEmoji;
 
-            // 构建完整的图片URL
-            const basePath = window.location.origin + window.location.pathname.replace('result.html', '');
-            const imageFileName = `${mbtiType}.png`;
-            const fullImagePath = basePath + 'image/' + imageFileName;
+            // 构建完整的图片URL（简化方式）
+            const fullImagePath = `image/${mbtiType}.png`;
             console.log('Loading personality image:', fullImagePath);
             
             const img = new Image();
