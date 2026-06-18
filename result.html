@@ -654,7 +654,7 @@
             <div class="modal-title">扫码支付 ¥9.9</div>
             <div class="qr-code-container">
                 <div id="qrCode" class="qr-code"></div>
-                <div class="qr-hint" id="qrHint">📱 <strong>方式一（推荐）：</strong>点击下方按钮保存二维码 → 打开微信/支付宝「扫一扫」→ 右上角「从相册选择」<br>💪 <strong>方式二：</strong>长按二维码图片直接识别（微信/Safari支持）</div>
+                <div class="qr-hint" id="qrHint">📱 <strong>方式一（推荐）：</strong>点击下方按钮保存二维码 → 打开微信「扫一扫」→ 右上角「从相册选择」<br>💪 <strong>方式二：</strong>长按二维码图片直接识别（微信/Safari支持）<br>🔗 <strong>方式三：</strong>点击二维码图片跳转到支付页面</div>
                 <button class="save-qr-btn" id="saveQrBtn">保存二维码到相册</button>
             </div>
 
@@ -944,7 +944,7 @@
             }
         }
 
-        // 生成二维码图片（支持多种QRCode库API）
+        // 生成二维码图片（支持多种QRCode库API，点击可跳转支付）
         async function generateQRCode(text) {
             const qrCodeEl = document.getElementById('qrCode');
             if (!qrCodeEl || !text) {
@@ -952,8 +952,12 @@
                 return;
             }
             
+            console.log('Generating QR code for:', text);
+            
             // 清空之前的内容
             qrCodeEl.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:200px;color:#999;font-size:14px;">正在生成二维码...</div>';
+            
+            let generated = false;
             
             // 尝试方案1: qrcode@1.x 的 toCanvas API
             if (typeof QRCode !== 'undefined' && typeof QRCode.toCanvas === 'function') {
@@ -972,16 +976,16 @@
                     });
                     
                     qrCodeEl.innerHTML = '';
-                    qrCodeEl.appendChild(canvas);
+                    qrCodeEl.appendChild(createClickableQR(canvas, text));
                     console.log('QR code generated with QRCode.toCanvas');
-                    return;
+                    generated = true;
                 } catch (error) {
                     console.error('QRCode.toCanvas failed:', error);
                 }
             }
             
-            // 尝试方案2: qrcodejs 库的 new QRCode() 构造函数
-            if (typeof QRCode !== 'undefined' && typeof QRCode === 'function') {
+            // 如果方案1失败，尝试方案2: qrcodejs 库的 new QRCode() 构造函数
+            if (!generated && typeof QRCode !== 'undefined' && typeof QRCode === 'function') {
                 try {
                     qrCodeEl.innerHTML = '';
                     new QRCode(qrCodeEl, {
@@ -992,30 +996,74 @@
                         colorLight: '#ffffff',
                         correctLevel: QRCode.CorrectLevel.L
                     });
+                    
+                    // 为生成的二维码添加点击跳转功能
+                    const canvas = qrCodeEl.querySelector('canvas');
+                    if (canvas) {
+                        qrCodeEl.innerHTML = '';
+                        qrCodeEl.appendChild(createClickableQR(canvas, text));
+                    }
                     console.log('QR code generated with new QRCode()');
-                    return;
+                    generated = true;
                 } catch (error) {
                     console.error('new QRCode() failed:', error);
                 }
             }
             
-            // 备用方案3: 使用内置的简单QR码生成器
-            const simpleCanvas = generateSimpleQRCode(text, 200);
-            if (simpleCanvas) {
-                qrCodeEl.innerHTML = '';
-                qrCodeEl.appendChild(simpleCanvas);
-                console.log('QR code generated with built-in generator');
-                return;
+            // 如果方案2失败，尝试方案3: 使用内置的简单QR码生成器
+            if (!generated) {
+                const simpleCanvas = generateSimpleQRCode(text, 200);
+                if (simpleCanvas) {
+                    qrCodeEl.innerHTML = '';
+                    qrCodeEl.appendChild(createClickableQR(simpleCanvas, text));
+                    console.log('QR code generated with built-in generator');
+                    generated = true;
+                }
             }
             
-            // 最后的备用方案：显示支付链接
-            qrCodeEl.innerHTML = `
-                <div style="text-align:center;color:#999;font-size:12px;padding:15px;">
-                    <p style="color:#e74c3c;margin-bottom:10px;">二维码生成失败</p>
-                    <p>请复制以下链接在浏览器打开支付：</p>
-                    <a href="${text}" target="_blank" style="word-break:break-all;font-size:11px;color:#c41e3a;">${text}</a>
-                </div>
-            `;
+            // 如果所有方案都失败，显示支付链接供用户点击或复制
+            if (!generated) {
+                qrCodeEl.innerHTML = `
+                    <div style="text-align:center;padding:15px;">
+                        <p style="color:#c41e3a;margin-bottom:10px;font-weight:bold;">请点击下方链接支付</p>
+                        <a href="${text}" target="_blank" rel="noopener noreferrer" 
+                           style="display:inline-block;padding:10px 20px;background:#c41e3a;color:white;border-radius:8px;text-decoration:none;font-size:14px;">
+                            立即支付 ¥9.9
+                        </a>
+                        <p style="color:#999;font-size:12px;margin-top:10px;">点击后将跳转到支付页面</p>
+                    </div>
+                `;
+            }
+        }
+        
+        // 创建可点击的二维码（点击跳转到支付页面）
+        function createClickableQR(canvas, payUrl) {
+            const wrapper = document.createElement('div');
+            wrapper.style.position = 'relative';
+            wrapper.style.cursor = 'pointer';
+            wrapper.style.display = 'inline-block';
+            wrapper.style.borderRadius = '8px';
+            wrapper.style.overflow = 'hidden';
+            
+            canvas.style.display = 'block';
+            
+            // 添加点击遮罩层（透明，用于捕获点击事件）
+            const overlay = document.createElement('div');
+            overlay.style.position = 'absolute';
+            overlay.style.top = '0';
+            overlay.style.left = '0';
+            overlay.style.width = '100%';
+            overlay.style.height = '100%';
+            overlay.style.background = 'rgba(0,0,0,0)';
+            
+            wrapper.appendChild(canvas);
+            wrapper.appendChild(overlay);
+            
+            wrapper.addEventListener('click', function() {
+                window.open(payUrl, '_blank', 'noopener,noreferrer');
+            });
+            
+            return wrapper;
         }
 
         function renderPersonality() {
@@ -1044,8 +1092,8 @@
             // 默认显示备用 emoji
             emojiEl.textContent = fallbackEmoji;
 
-            // 构建完整的图片URL（简化方式）
-            const fullImagePath = `image/${mbtiType}.png`;
+            // 构建完整的图片URL（使用绝对路径）
+            const fullImagePath = `${window.location.origin}/image/${mbtiType}.png`;
             console.log('Loading personality image:', fullImagePath);
             
             const img = new Image();
@@ -1055,6 +1103,7 @@
             img.style.objectFit = 'contain';
             img.style.borderRadius = '8px';
             img.style.border = '2px solid #f0f0f0';
+            img.style.display = 'block';
 
             // 设置超时机制
             let loadTimeout = setTimeout(() => {
@@ -1068,9 +1117,10 @@
                 emojiEl.textContent = '';
                 emojiEl.appendChild(img);
             };
-            img.onerror = function() {
+            img.onerror = function(event) {
                 clearTimeout(loadTimeout);
-                console.warn('Personality image failed to load:', fullImagePath, '- Using emoji fallback:', fallbackEmoji);
+                console.error('Personality image failed to load:', fullImagePath, 'Error:', event);
+                console.warn('Falling back to emoji:', fallbackEmoji);
                 emojiEl.textContent = fallbackEmoji;
             };
 
