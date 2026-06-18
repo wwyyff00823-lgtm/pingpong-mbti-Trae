@@ -1,8 +1,8 @@
 const crypto = require('crypto');
 
 // 环境变量
-const APPID = process.env.XUNHUPAY_APPID;
-const APPSECRET = process.env.XUNHUPAY_APPSECRET;
+const APPID = process.env.HUPIJIAO_APPID;
+const APPSECRET = process.env.HUPIJIAO_APP_SECRET;
 
 function generateXhHash(params, hashkey) {
     const cleanParams = { ...params };
@@ -19,83 +19,93 @@ function generateXhHash(params, hashkey) {
     return crypto.createHash('md5').update(finalStr).digest('hex').toLowerCase();
 }
 
-const ALLOWED_ORIGINS = [
-    'https://api.xunhupay.com',
-    'https://ping-mbti.netlify.app'
-];
-
 exports.handler = async function(event, context) {
-    const origin = event.headers.origin || event.headers.Origin || '';
-    const allowedOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : '';
-    
     const headers = {
-        'Access-Control-Allow-Origin': allowedOrigin,
-        'Access-Control-Allow-Headers': 'Content-Type',
-        'Access-Control-Allow-Methods': 'POST, OPTIONS',
         'Content-Type': 'application/json'
     };
+    
+    console.log('=== Payment Notify Received ===');
+    console.log('Time:', new Date().toISOString());
+    console.log('HTTP Method:', event.httpMethod);
+    console.log('Headers:', JSON.stringify(event.headers));
     
     if (event.httpMethod === 'OPTIONS') {
         return { statusCode: 200, headers, body: '' };
     }
     
-    console.log('=== Payment Notify Received ===');
-    console.log('Time:', new Date().toISOString());
+    if (event.httpMethod !== 'POST') {
+        console.log('Invalid method:', event.httpMethod);
+        return { statusCode: 405, headers, body: JSON.stringify({ errcode: -1, errmsg: 'POST only' }) };
+    }
     
     let body = {};
     
-    // 解析请求体（支持JSON和form-data）
-    if (event.httpMethod === 'POST' && event.body) {
-        if (event.headers['content-type'] && event.headers['content-type'].includes('application/json')) {
-            try {
+    try {
+        if (event.body) {
+            if (event.headers['content-type'] && event.headers['content-type'].includes('application/json')) {
                 body = JSON.parse(event.body);
-            } catch (e) {
-                console.log('JSON parse failed');
+                console.log('Parsed JSON body:', JSON.stringify(body));
+            } else {
+                const formData = new URLSearchParams(event.body);
+                formData.forEach((value, key) => {
+                    body[key] = value;
+                });
+                console.log('Parsed form body:', JSON.stringify(body));
             }
-        } else {
-            // form-data 格式
-            const formData = new URLSearchParams(event.body);
-            formData.forEach((value, key) => {
-                body[key] = value;
-            });
         }
+    } catch (e) {
+        console.error('Body parse error:', e.message);
+        return { statusCode: 200, headers, body: JSON.stringify({ errcode: -1, errmsg: 'invalid request' }) };
     }
     
-    const { trade_order_id, total_fee, status, hash, transaction_id, open_order_id } = body;
+    const { trade_order_id, total_fee, status, hash, transaction_id, open_order_id, appid } = body;
     
-    console.log('Order:', trade_order_id);
+    console.log('Order ID:', trade_order_id);
     console.log('Status:', status);
     console.log('Amount:', total_fee);
+    console.log('AppID:', appid);
     
-    // 验证必要参数
     if (!trade_order_id || !status || !hash) {
-        console.log('Missing required parameters');
-        return { statusCode: 200, body: JSON.stringify({ errcode: -1, errmsg: 'fail' }) };
+        console.error('Missing required parameters');
+        return { statusCode: 200, headers, body: JSON.stringify({ errcode: -1, errmsg: 'fail' }) };
     }
     
-    // 验证签名
+    // 验证支付金额是否正确（必须是9.9元）
+    const expectedAmount = 9.9;
+    const actualAmount = parseFloat(total_fee);
+    if (isNaN(actualAmount) || actualAmount !== expectedAmount) {
+        console.error('Invalid payment amount:', total_fee, 'Expected:', expectedAmount);
+        return { statusCode: 200, headers, body: JSON.stringify({ errcode: -1, errmsg: 'invalid amount' }) };
+    }
+    
+    if (!APPID || !APPSECRET) {
+        console.error('Missing APPID or APPSECRET environment variables');
+        return { statusCode: 500, headers, body: JSON.stringify({ errcode: -1, errmsg: 'server error' }) };
+    }
+    
     const paramsForSign = { ...body };
     delete paramsForSign.hash;
     
     const calculatedHash = generateXhHash(paramsForSign, APPSECRET);
+    console.log('Calculated hash:', calculatedHash);
+    console.log('Received hash:', hash.toLowerCase());
     
     if (calculatedHash !== hash.toLowerCase()) {
-        console.log('Signature verification failed');
-        return { statusCode: 200, body: JSON.stringify({ errcode: -1, errmsg: 'signature fail' }) };
+        console.error('Signature verification failed');
+        return { statusCode: 200, headers, body: JSON.stringify({ errcode: -1, errmsg: 'signature fail' }) };
     }
     
-    // 检查支付状态
-    const successStatuses = ['OD', 'PAID', 'TRADE_SUCCESS', 'paid', 'success'];
-    const isSuccess = successStatuses.includes(status.toUpperCase()) || successStatuses.includes(status);
+    console.log('Signature verified successfully');
+    
+    const successStatuses = ['OD', 'PAID', 'TRADE_SUCCESS', 'paid', 'success', '1'];
+    const isSuccess = successStatuses.includes(String(status).toUpperCase()) || successStatuses.includes(String(status));
     
     if (isSuccess) {
         console.log('Payment SUCCESS for order:', trade_order_id);
         
-        // 使用 Netlify Blobs 持久化支付状态
         try {
             const store = await import('@netlify/blobs').then(m => m.getStore('payments'));
             
-            // 存储订单支付信息
             const paymentData = {
                 order_no: trade_order_id,
                 status: 'paid',
@@ -106,9 +116,8 @@ exports.handler = async function(event, context) {
             };
             
             await store.set(trade_order_id, JSON.stringify(paymentData));
-            console.log('Payment saved to Netlify Blobs');
+            console.log('Payment data saved to Netlify Blobs');
             
-            // 从订单号解析 userId、MBTI 和 Level（格式：PING_timestamp_random_MBTI_LEVEL_userId）
             const parts = trade_order_id.split('_');
             if (parts.length >= 6) {
                 const mbtiPart = parts[3] || 'XXXX';
@@ -119,7 +128,6 @@ exports.handler = async function(event, context) {
                 const levelFull = levelMap[levelPart] || 'mid';
                 const userPaymentKey = `paid_${userIdPart}_${mbtiPart}_${levelFull}`;
                 
-                // 存储用户支付记录（绑定 userId + MBTI + 完整 level）
                 await store.set(userPaymentKey, JSON.stringify({
                     paid: true,
                     order_no: trade_order_id,
@@ -130,18 +138,16 @@ exports.handler = async function(event, context) {
                 }));
                 console.log('User payment record saved:', userPaymentKey);
             } else {
-                console.warn('Order ID length unexpected, skip user payment record:', trade_order_id.length);
+                console.warn('Order ID format unexpected:', trade_order_id);
             }
             
         } catch (blobError) {
-            console.log('Netlify Blobs error:', blobError.message);
-            // 即使存储失败，也返回success让虎皮椒不重试，但记录日志供人工处理
+            console.error('Netlify Blobs error:', blobError.message);
         }
         
-        // 返回虎皮椒要求的正确格式
-        return { statusCode: 200, body: JSON.stringify({ errcode: 0, errmsg: 'success' }) };
+        return { statusCode: 200, headers, body: JSON.stringify({ errcode: 0, errmsg: 'success' }) };
     } else {
-        console.log('Payment status:', status, '(not success)');
-        return { statusCode: 200, body: JSON.stringify({ errcode: 0, errmsg: 'success' }) };
+        console.log('Payment status not success:', status);
+        return { statusCode: 200, headers, body: JSON.stringify({ errcode: 0, errmsg: 'success' }) };
     }
 };

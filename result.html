@@ -275,6 +275,49 @@
         .prescription-item:last-child {
             border-bottom: none;
         }
+        .radar-section {
+            background: linear-gradient(135deg, #f8f9fa 0%, #f1f3f4 100%);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 24px;
+        }
+        .radar-container {
+            position: relative;
+            width: 100%;
+            max-width: 320px;
+            margin: 0 auto;
+            padding-top: 100%;
+        }
+        .radar-chart {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        .radar-labels {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+        .radar-label {
+            position: absolute;
+            font-size: 12px;
+            font-weight: bold;
+            color: #333;
+            text-align: center;
+            transform: translate(-50%, -50%);
+        }
+        .radar-score {
+            position: absolute;
+            font-size: 11px;
+            color: #c41e3a;
+            font-weight: bold;
+            transform: translate(-50%, -50%);
+        }
         .footer {
             text-align: center;
             font-size: 12px;
@@ -567,6 +610,16 @@
             </div>
             
             <div>
+                <div class="report-title">性格维度雷达图</div>
+                <div class="radar-section">
+                    <div class="radar-container">
+                        <canvas class="radar-chart" id="radarChart"></canvas>
+                        <div class="radar-labels" id="radarLabels"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <div>
                 <div class="report-title">深度病理分析</div>
                 <div class="report-content" id="reportAnalysis"></div>
             </div>
@@ -649,7 +702,129 @@
             setTimeout(() => toast.classList.remove('show'), 2000);
         }
 
-        // 生成二维码图片（使用 QRCode.js 库）
+        // 简单的QR码生成器（备用方案）
+        function generateSimpleQRCode(text, size = 200) {
+            const qrCodeEl = document.getElementById('qrCode');
+            if (!qrCodeEl || !text) {
+                console.error('QR code container or text missing');
+                return null;
+            }
+            
+            try {
+                const canvas = document.createElement('canvas');
+                canvas.width = size;
+                canvas.height = size;
+                const ctx = canvas.getContext('2d');
+                
+                const modules = qrCodeEncode(text);
+                if (!modules) {
+                    console.error('Failed to encode QR code');
+                    return null;
+                }
+                
+                const moduleSize = size / modules.length;
+                const margin = Math.floor(moduleSize * 4);
+                
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, size, size);
+                
+                ctx.fillStyle = '#000000';
+                for (let y = 0; y < modules.length; y++) {
+                    for (let x = 0; x < modules[y].length; x++) {
+                        if (modules[y][x]) {
+                            const px = margin + x * moduleSize;
+                            const py = margin + y * moduleSize;
+                            ctx.fillRect(px, py, moduleSize - 1, moduleSize - 1);
+                        }
+                    }
+                }
+                
+                return canvas;
+            } catch (error) {
+                console.error('Simple QR code generation error:', error);
+                return null;
+            }
+        }
+        
+        // QR码编码简化版（仅支持数字、字母和部分符号）
+        function qrCodeEncode(text) {
+            try {
+                const version = 1;
+                const maskPattern = 0;
+                const modules = Array(21).fill(null).map(() => Array(21).fill(false));
+                
+                // 添加定位图案
+                for (let i = 0; i < 7; i++) {
+                    for (let j = 0; j < 7; j++) {
+                        if ((i < 7 && j < 7) || (i < 7 && j > 13) || (i > 13 && j < 7)) {
+                            modules[i][j] = (i < 5 && i > 0 && j < 5 && j > 0) ? (i !== 2 || j !== 2) : true;
+                        }
+                    }
+                }
+                
+                // 添加格式信息
+                const formatString = '101010000010010';
+                let formatIndex = 0;
+                for (let i = 0; i < 21; i++) {
+                    if (i < 9 && (i === 6 || modules[8][i] === undefined)) {
+                        if (formatIndex < formatString.length) {
+                            modules[8][i] = formatString[formatIndex++] === '1';
+                        }
+                    }
+                    if (i < 9 && (i === 6 || modules[i][8] === undefined)) {
+                        if (formatIndex < formatString.length) {
+                            modules[i][8] = formatString[formatIndex++] === '1';
+                        }
+                    }
+                }
+                
+                // 简单的数据编码
+                let data = [];
+                for (let i = 0; i < text.length; i++) {
+                    const charCode = text.charCodeAt(i);
+                    if (charCode >= 48 && charCode <= 57) {
+                        data.push(charCode - 48);
+                    } else if (charCode >= 65 && charCode <= 90) {
+                        data.push(charCode - 55);
+                    } else if (charCode >= 97 && charCode <= 122) {
+                        data.push(charCode - 87);
+                    } else if (charCode === 32) {
+                        data.push(36);
+                    } else if (charCode === 46) {
+                        data.push(37);
+                    } else if (charCode === 45) {
+                        data.push(38);
+                    } else if (charCode === 95) {
+                        data.push(39);
+                    } else {
+                        data.push(36);
+                    }
+                }
+                
+                // 将数据填入二维码（简化版）
+                let dataIndex = 0;
+                for (let y = 0; y < 21; y += 2) {
+                    for (let x = y % 4 === 0 ? 20 : 0; y % 4 === 0 ? x >= 0 : x < 21; y % 4 === 0 ? x-- : x++) {
+                        if (modules[y][x] === false) {
+                            if (dataIndex < data.length) {
+                                modules[y][x] = (data[dataIndex] & 1) === 1;
+                                data[dataIndex] >>= 1;
+                                if ((data[dataIndex] === 0) && (dataIndex % 2 === 1)) {
+                                    dataIndex++;
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                return modules;
+            } catch (error) {
+                console.error('QR code encoding error:', error);
+                return null;
+            }
+        }
+
+        // 生成二维码图片（优先使用QRCode.js库，失败则使用备用方案）
         async function generateQRCode(text) {
             const qrCodeEl = document.getElementById('qrCode');
             if (!qrCodeEl || !text) {
@@ -657,44 +832,51 @@
                 return;
             }
             
-            // 检查 QRCode 库是否可用
-            if (typeof QRCode === 'undefined') {
-                console.error('QRCode library not loaded');
-                qrCodeEl.innerHTML = '<div style="text-align:center;color:#e74c3c;font-size:12px;padding:20px;">二维码库加载失败<br>请刷新页面重试</div>';
+            // 清空之前的内容
+            qrCodeEl.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:200px;color:#999;font-size:14px;">正在生成二维码...</div>';
+            
+            try {
+                // 优先使用QRCode.js库
+                if (typeof QRCode !== 'undefined') {
+                    const canvas = document.createElement('canvas');
+                    canvas.style.width = '200px';
+                    canvas.style.height = '200px';
+                    
+                    await QRCode.toCanvas(canvas, text, {
+                        width: 200,
+                        margin: 2,
+                        color: {
+                            dark: '#000000',
+                            light: '#ffffff'
+                        }
+                    });
+                    
+                    qrCodeEl.innerHTML = '';
+                    qrCodeEl.appendChild(canvas);
+                    console.log('QR code generated with QRCode.js');
+                    return;
+                }
+            } catch (error) {
+                console.error('QRCode.js generation error, falling back to simple generator:', error);
+            }
+            
+            // 备用方案：使用简单的QR码生成器
+            const simpleCanvas = generateSimpleQRCode(text, 200);
+            if (simpleCanvas) {
+                qrCodeEl.innerHTML = '';
+                qrCodeEl.appendChild(simpleCanvas);
+                console.log('QR code generated with simple generator');
                 return;
             }
             
-            try {
-                // 清空之前的内容
-                qrCodeEl.innerHTML = '';
-                
-                // 创建 canvas 元素用于生成二维码
-                const canvas = document.createElement('canvas');
-                canvas.style.width = '200px';
-                canvas.style.height = '200px';
-                
-                await QRCode.toCanvas(canvas, text, {
-                    width: 200,
-                    margin: 2,
-                    color: {
-                        dark: '#000000',
-                        light: '#ffffff'
-                    }
-                });
-                
-                qrCodeEl.appendChild(canvas);
-                console.log('QR code generated successfully');
-            } catch (error) {
-                console.error('QR code generation error:', error);
-                // 如果生成失败，显示错误信息和链接
-                qrCodeEl.innerHTML = `
-                    <div style="text-align:center;color:#999;font-size:12px;padding:15px;">
-                        <p style="color:#e74c3c;margin-bottom:10px;">二维码生成失败</p>
-                        <p>支付链接：</p>
-                        <a href="${text}" target="_blank" style="word-break:break-all;font-size:11px;">${text}</a>
-                    </div>
-                `;
-            }
+            // 最后的备用方案：显示支付链接
+            qrCodeEl.innerHTML = `
+                <div style="text-align:center;color:#999;font-size:12px;padding:15px;">
+                    <p style="color:#e74c3c;margin-bottom:10px;">二维码生成失败</p>
+                    <p>请复制以下链接在浏览器打开支付：</p>
+                    <a href="${text}" target="_blank" style="word-break:break-all;font-size:11px;color:#c41e3a;">${text}</a>
+                </div>
+            `;
         }
 
         function renderPersonality() {
@@ -774,6 +956,120 @@
             });
         }
 
+        function renderRadarChart() {
+            const dimensionScores = JSON.parse(localStorage.getItem('dimensionScores') || '{"E":0,"I":0,"S":0,"N":0,"T":0,"F":0,"J":0,"P":0}');
+            
+            const dimensions = [
+                { name: '外向(E)', key: 'E', opposite: 'I' },
+                { name: '感觉(S)', key: 'S', opposite: 'N' },
+                { name: '思考(T)', key: 'T', opposite: 'F' },
+                { name: '判断(J)', key: 'J', opposite: 'P' }
+            ];
+            
+            const scores = dimensions.map(dim => {
+                const total = dimensionScores[dim.key] + dimensionScores[dim.opposite];
+                if (total === 0) return 50;
+                return Math.round((dimensionScores[dim.key] / total) * 100);
+            });
+            
+            const canvas = document.getElementById('radarChart');
+            const ctx = canvas.getContext('2d');
+            const container = canvas.parentElement;
+            const size = Math.min(container.clientWidth, container.clientHeight);
+            canvas.width = size;
+            canvas.height = size;
+            
+            const centerX = size / 2;
+            const centerY = size / 2;
+            const maxRadius = size * 0.4;
+            const sides = 4;
+            const angleStep = (Math.PI * 2) / sides;
+            
+            ctx.clearRect(0, 0, size, size);
+            
+            for (let i = 5; i >= 1; i--) {
+                const radius = (maxRadius * i) / 5;
+                ctx.beginPath();
+                for (let j = 0; j < sides; j++) {
+                    const angle = j * angleStep - Math.PI / 2;
+                    const x = centerX + radius * Math.cos(angle);
+                    const y = centerY + radius * Math.sin(angle);
+                    if (j === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                }
+                ctx.closePath();
+                ctx.strokeStyle = '#e0e0e0';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+            }
+            
+            for (let i = 0; i < sides; i++) {
+                const angle = i * angleStep - Math.PI / 2;
+                const x = centerX + maxRadius * Math.cos(angle);
+                const y = centerY + maxRadius * Math.sin(angle);
+                ctx.beginPath();
+                ctx.moveTo(centerX, centerY);
+                ctx.lineTo(x, y);
+                ctx.strokeStyle = '#e0e0e0';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+            }
+            
+            ctx.beginPath();
+            scores.forEach((score, i) => {
+                const angle = i * angleStep - Math.PI / 2;
+                const radius = (maxRadius * score) / 100;
+                const x = centerX + radius * Math.cos(angle);
+                const y = centerY + radius * Math.sin(angle);
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            });
+            ctx.closePath();
+            ctx.fillStyle = 'rgba(196, 30, 58, 0.2)';
+            ctx.fill();
+            ctx.strokeStyle = '#c41e3a';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            
+            scores.forEach((score, i) => {
+                const angle = i * angleStep - Math.PI / 2;
+                const radius = (maxRadius * score) / 100;
+                const x = centerX + radius * Math.cos(angle);
+                const y = centerY + radius * Math.sin(angle);
+                ctx.beginPath();
+                ctx.arc(x, y, 4, 0, Math.PI * 2);
+                ctx.fillStyle = '#c41e3a';
+                ctx.fill();
+            });
+            
+            const labelsContainer = document.getElementById('radarLabels');
+            labelsContainer.innerHTML = '';
+            labelsContainer.style.width = size + 'px';
+            labelsContainer.style.height = size + 'px';
+            
+            dimensions.forEach((dim, i) => {
+                const angle = i * angleStep - Math.PI / 2;
+                const labelRadius = maxRadius + 20;
+                const x = centerX + labelRadius * Math.cos(angle);
+                const y = centerY + labelRadius * Math.sin(angle);
+                
+                const labelEl = document.createElement('div');
+                labelEl.className = 'radar-label';
+                labelEl.textContent = dim.name;
+                labelEl.style.left = x + 'px';
+                labelEl.style.top = y + 'px';
+                labelsContainer.appendChild(labelEl);
+                
+                const scoreEl = document.createElement('div');
+                scoreEl.className = 'radar-score';
+                scoreEl.textContent = scores[i] + '%';
+                const scoreRadius = (maxRadius * scores[i]) / 100 - 15;
+                scoreEl.style.left = (centerX + scoreRadius * Math.cos(angle)) + 'px';
+                scoreEl.style.top = (centerY + scoreRadius * Math.sin(angle)) + 'px';
+                labelsContainer.appendChild(scoreEl);
+            });
+        }
+
         function renderReport(level) {
             const personality = personalityData[mbtiType];
             if (!personality || !personality.reports[level]) return;
@@ -793,6 +1089,8 @@
                 li.textContent = item;
                 prescriptionList.appendChild(li);
             });
+
+            renderRadarChart();
 
             document.getElementById('unlockSection').style.display = 'none';
             document.getElementById('reportSection').classList.add('show');
@@ -1192,21 +1490,23 @@
                     }
 
                     // 创建分享内容
+                    const currentUrl = `${window.location.protocol}//${window.location.host}`;
                     const shareContent = `
 我在乒乓球MBTI测试中测出了「${mbtiType} - ${personality.name}」！
 
 ${personality.traits.slice(0, 2).join('\n')}
 
 快来测测你的乒乓球人格吧！
-测试链接：http://localhost:8000
+测试链接：${currentUrl}
                     `.trim();
 
                     // 尝试使用 Web Share API
                     if (navigator.share) {
+                        const currentUrl = `${window.location.protocol}//${window.location.host}`;
                         await navigator.share({
                             title: `乒乓球MBTI - ${mbtiType} ${personality.name}`,
                             text: shareContent,
-                            url: 'http://localhost:8000'
+                            url: currentUrl
                         });
                     } else {
                         // 复制到剪贴板
@@ -1222,7 +1522,7 @@ ${personality.traits.slice(0, 2).join('\n')}
                         <div class="share-content">
                             <div class="share-title">分享测试结果</div>
                             <div class="share-mbti">${mbtiType} - ${personalityData[mbtiType]?.name}</div>
-                            <textarea class="share-textarea" readonly>我在乒乓球MBTI测试中测出了「${mbtiType} - ${personalityData[mbtiType]?.name}」！快来测测你的乒乓球人格吧！测试链接：http://localhost:8000</textarea>
+                            <textarea class="share-textarea" readonly>我在乒乓球MBTI测试中测出了「${mbtiType} - ${personalityData[mbtiType]?.name}」！快来测测你的乒乓球人格吧！测试链接：${window.location.protocol}//${window.location.host}</textarea>
                             <button class="share-copy-btn" id="copyShareBtn">复制内容</button>
                             <button class="share-close-btn">关闭</button>
                         </div>

@@ -5,10 +5,10 @@ const qs = require('querystring');
 const API_URL = "https://api.xunhupay.com/payment/do.html";
 
 // 环境变量
-const APPID = process.env.XUNHUPAY_APPID;
-const APPSECRET = process.env.XUNHUPAY_APPSECRET;
-const NOTIFY_URL = process.env.XUNHUPAY_NOTIFY_URL;
-const RETURN_URL = process.env.XUNHUPAY_RETURN_URL;
+const APPID = process.env.HUPIJIAO_APPID;
+const APPSECRET = process.env.HUPIJIAO_APP_SECRET;
+const NOTIFY_URL = process.env.HUPIJIAO_NOTIFY_URL;
+const RETURN_URL = process.env.HUPIJIAO_RETURN_URL;
 
 // 服务端硬编码配置（防止客户端伪造）
 const PRICE_YUAN = 9.9;  // 价格：9.9元
@@ -30,7 +30,9 @@ function generateXhHash(params, hashkey) {
 }
 
 const ALLOWED_ORIGINS = [
-    'https://ping-mbti.netlify.app'
+    'https://harmonious-cactus-ff7aac.netlify.app',
+    'http://localhost:8888',
+    'http://localhost:9999'
 ];
 
 exports.handler = async function(event, context) {

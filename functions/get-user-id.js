@@ -1,7 +1,9 @@
 const crypto = require('crypto');
 
 const ALLOWED_ORIGINS = [
-    'https://ping-mbti.netlify.app'
+    'https://harmonious-cactus-ff7aac.netlify.app',
+    'http://localhost:8888',
+    'http://localhost:9999'
 ];
 
 exports.handler = async function(event, context) {

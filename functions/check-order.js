@@ -1,8 +1,8 @@
 const crypto = require('crypto');
 
 // 环境变量
-const APPID = process.env.XUNHUPAY_APPID;
-const APPSECRET = process.env.XUNHUPAY_APPSECRET;
+const APPID = process.env.HUPIJIAO_APPID;
+const APPSECRET = process.env.HUPIJIAO_APP_SECRET;
 const QUERY_URL = "https://api.xunhupay.com/payment/query.html";
 
 function generateXhHash(params, hashkey) {
@@ -21,7 +21,9 @@ function generateXhHash(params, hashkey) {
 }
 
 const ALLOWED_ORIGINS = [
-    'https://ping-mbti.netlify.app'
+    'https://harmonious-cactus-ff7aac.netlify.app',
+    'http://localhost:8888',
+    'http://localhost:9999'
 ];
 
 exports.handler = async function(event, context) {
