@@ -21,9 +21,7 @@ function generateXhHash(params, hashkey) {
 }
 
 const ALLOWED_ORIGINS = [
-    'https://ping-mbti.netlify.app',
-    'http://localhost:8000',
-    'http://127.0.0.1:8000'
+    'https://ping-mbti.netlify.app'
 ];
 
 exports.handler = async function(event, context) {

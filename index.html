@@ -252,20 +252,35 @@
         const toast = document.getElementById('toast');
         let selectedLevel = '';
 
-        function generateUUID() {
-            if (localStorage.getItem('userId')) {
-                return localStorage.getItem('userId');
+        async function generateUUID() {
+            const existingUserId = localStorage.getItem('userId');
+            if (existingUserId && existingUserId.length >= 32) {
+                return existingUserId;
             }
-            const uuid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-                const r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
-                return v.toString(16);
-            });
-            localStorage.setItem('userId', uuid);
-            return uuid;
+            
+            try {
+                const response = await fetch('/.netlify/functions/get-user-id', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userId: existingUserId || '' })
+                });
+                const data = await response.json();
+                if (data.code === 0 && data.userId) {
+                    localStorage.setItem('userId', data.userId);
+                    return data.userId;
+                }
+            } catch (error) {
+                console.error('Failed to get userId from server:', error);
+            }
+            
+            const fallbackId = crypto.randomUUID ? crypto.randomUUID().replace(/-/g, '') : 
+                Array.from({length: 32}, () => Math.floor(Math.random() * 16).toString(16)).join('');
+            localStorage.setItem('userId', fallbackId);
+            return fallbackId;
         }
 
         // 页面加载时自动选中之前选择的水平
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('DOMContentLoaded', async () => {
             const savedLevel = localStorage.getItem('userLevel');
             if (savedLevel) {
                 const savedCard = document.querySelector(`.level-card[data-level="${savedLevel}"]`);
@@ -276,7 +291,7 @@
                     btn.disabled = false;
                 }
             }
-            generateUUID();
+            await generateUUID();
         });
 
         cards.forEach(card => {

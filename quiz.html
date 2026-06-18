@@ -817,12 +817,9 @@
                 const q29Selected = q29Answer.options.find(opt => opt.id === answers['q29']);
                 
                 if (q5Selected && q29Selected) {
-                    // aggressive = E 倾向，conservative = I 倾向
-                    // 如果两题倾向不一致（一个E一个I），则矛盾
-                    const q5IsE = q5Selected.tendency === 'aggressive'; // E 倾向
-                    const q29IsE = q29Selected.tendency === 'aggressive'; // E 倾向
+                    const q5IsE = q5Selected.tendency === 'aggressive';
+                    const q29IsE = q29Selected.tendency === 'aggressive';
                     
-                    // 矛盾：Q5是E倾向但Q29是I倾向，或反过来
                     if ((q5IsE && !q29IsE) || (!q5IsE && q29IsE)) {
                         contradictionCount++;
                     }
@@ -838,13 +835,46 @@
                 const q30Selected = q30Answer.options.find(opt => opt.id === answers['q30']);
                 
                 if (q11Selected && q30Selected) {
-                    // planned = J 倾向，flexible = P 倾向
-                    // 如果两题倾向不一致（一个J一个P），则矛盾
-                    const q11IsJ = q11Selected.tendency === 'planned'; // J 倾向
-                    const q30IsJ = q30Selected.tendency === 'planned'; // J 倾向
+                    const q11IsJ = q11Selected.tendency === 'planned';
+                    const q30IsJ = q30Selected.tendency === 'planned';
                     
-                    // 矛盾：Q11是J倾向但Q30是P倾向，或反过来
                     if ((q11IsJ && !q30IsJ) || (!q11IsJ && q30IsJ)) {
+                        contradictionCount++;
+                    }
+                }
+            }
+            
+            // 第三组（S/N 维度）：Q2、Q3，检测细节/整体倾向是否一致
+            const q2Answer = shuffledQuestions.find(q => q.id === 'q2');
+            const q3Answer = shuffledQuestions.find(q => q.id === 'q3');
+            
+            if (q2Answer && q3Answer) {
+                const q2Selected = q2Answer.options.find(opt => opt.id === answers['q2']);
+                const q3Selected = q3Answer.options.find(opt => opt.id === answers['q3']);
+                
+                if (q2Selected && q3Selected) {
+                    const q2IsS = q2Selected.score.S && q2Selected.score.S > 0;
+                    const q3IsS = q3Selected.score.S && q3Selected.score.S > 0;
+                    
+                    if ((q2IsS && !q3IsS) || (!q2IsS && q3IsS)) {
+                        contradictionCount++;
+                    }
+                }
+            }
+            
+            // 第四组（T/F 维度）：Q6、Q7，检测理性/感性倾向是否一致
+            const q6Answer = shuffledQuestions.find(q => q.id === 'q6');
+            const q7Answer = shuffledQuestions.find(q => q.id === 'q7');
+            
+            if (q6Answer && q7Answer) {
+                const q6Selected = q6Answer.options.find(opt => opt.id === answers['q6']);
+                const q7Selected = q7Answer.options.find(opt => opt.id === answers['q7']);
+                
+                if (q6Selected && q7Selected) {
+                    const q6IsT = q6Selected.score.T && q6Selected.score.T > 0;
+                    const q7IsT = q7Selected.score.T && q7Selected.score.T > 0;
+                    
+                    if ((q6IsT && !q7IsT) || (!q6IsT && q7IsT)) {
                         contradictionCount++;
                     }
                 }
@@ -859,10 +889,27 @@
             const TF = dimensionScores.T - dimensionScores.F;
             const JP = dimensionScores.J - dimensionScores.P;
             
+            const maxScore = 18;
+            const threshold = 2;
+            
             function getLetter(positive, negative, diff) {
-                if (diff > 0) return positive;
-                if (diff < 0) return negative;
-                return Math.random() >= 0.5 ? positive : negative;
+                if (diff > threshold) return positive;
+                if (diff < -threshold) return negative;
+                
+                if (diff === 0) {
+                    const total = dimensionScores[positive] + dimensionScores[negative];
+                    if (total === 0) {
+                        return Math.random() >= 0.5 ? positive : negative;
+                    }
+                    const ratio = dimensionScores[positive] / total;
+                    return Math.random() < ratio ? positive : negative;
+                }
+                
+                const normalized = Math.abs(diff) / maxScore;
+                const probability = 0.5 + normalized * 0.5;
+                return diff > 0 ? 
+                    (Math.random() < probability ? positive : negative) :
+                    (Math.random() < probability ? negative : positive);
             }
             
             const mbti = 

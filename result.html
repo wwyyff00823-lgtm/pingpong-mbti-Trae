@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>乒乓球MBTI测试结果</title>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { 
@@ -497,7 +498,7 @@
             <div class="modal-title">扫码支付 ¥9.9</div>
             <div class="qr-code-container">
                 <img id="qrCode" class="qr-code" src="" alt="支付二维码">
-                <div class="qr-hint" id="qrHint">请使用微信/支付宝【扫一扫】→【从相册选择二维码】完成支付。苹果手机用户可点击下方按钮保存二维码到相册。</div>
+                <div class="qr-hint" id="qrHint">📱 <strong>方式一（推荐）：</strong>点击下方按钮保存二维码 → 打开微信/支付宝「扫一扫」→ 右上角「从相册选择」<br>💪 <strong>方式二：</strong>长按二维码图片直接识别（微信/Safari支持）</div>
                 <button class="save-qr-btn" id="saveQrBtn">保存二维码到相册</button>
             </div>
 
@@ -545,6 +546,37 @@
             setTimeout(() => toast.classList.remove('show'), 2000);
         }
 
+        // 生成二维码图片（使用 QRCode.js 库）
+        async function generateQRCode(text) {
+            const qrCodeEl = document.getElementById('qrCode');
+            if (!qrCodeEl || !text) return;
+            
+            try {
+                // 清空之前的内容
+                qrCodeEl.innerHTML = '';
+                
+                // 创建 canvas 元素用于生成二维码
+                const canvas = document.createElement('canvas');
+                canvas.style.width = '200px';
+                canvas.style.height = '200px';
+                
+                await QRCode.toCanvas(canvas, text, {
+                    width: 200,
+                    margin: 2,
+                    color: {
+                        dark: '#000000',
+                        light: '#ffffff'
+                    }
+                });
+                
+                qrCodeEl.appendChild(canvas);
+            } catch (error) {
+                console.error('QR code generation error:', error);
+                // 如果生成失败，显示错误信息并尝试直接显示链接
+                qrCodeEl.innerHTML = '<div style="text-align:center;color:#999;font-size:12px;padding:20px;">二维码生成失败<br>请手动复制链接</div>';
+            }
+        }
+
         function renderPersonality() {
             const personality = personalityData[mbtiType];
             if (!personality) return;
@@ -552,16 +584,21 @@
             document.getElementById('mbtiType').textContent = mbtiType;
             document.getElementById('personalityName').textContent = personality.name;
 
-            // 渲染人格头像：优先加载 image/<TYPE>.png，加载失败回退 emoji
+            // MBTI类型对应的备用emoji
+            const mbtiEmojis = {
+                'ESTP': '💥', 'ISTJ': '📋', 'ESFP': '🎉', 'INFJ': '🎯',
+                'INTJ': '🧠', 'ISTP': '🛡️', 'ISFJ': '🏰', 'INFP': '🍃',
+                'ESTJ': '⚖️', 'ENFP': '🎨', 'ENTJ': '👑', 'ENFJ': '🌟',
+                'ISFP': '🎭', 'INTP': '🔬', 'ENTP': '💡', 'ESFJ': '🤝'
+            };
+            const fallbackEmoji = mbtiEmojis[mbtiType] || '🏓';
+
+            // 渲染人格头像：优先加载 image/<TYPE>.png，加载失败回退对应emoji
             const emojiEl = document.getElementById('personalityEmoji');
-            // 先清空容器，初始默认显示 🏓（让用户知道"加载中"）
             emojiEl.innerHTML = '';
-            emojiEl.textContent = '🏓';
+            emojiEl.textContent = fallbackEmoji;
 
             if (personality.emoji && personality.emoji.match(/\.(png|jpg|jpeg|gif|webp)$/i)) {
-                // 在 image 加载完成前，保留 emoji 作为占位
-                const placeholderText = emojiEl.textContent;
-
                 const img = new Image();
                 img.alt = personality.name;
                 img.loading = 'lazy';
@@ -571,21 +608,17 @@
                 img.style.objectFit = 'contain';
 
                 img.onload = function() {
-                    // 图片加载成功：替换 emoji 为图片
                     emojiEl.textContent = '';
                     emojiEl.appendChild(img);
                 };
                 img.onerror = function() {
-                    // 图片加载失败（网络问题/路径错误）：保留默认 🏓
                     console.warn('Personality image failed to load:', personality.emoji);
-                    emojiEl.textContent = placeholderText;
+                    emojiEl.textContent = fallbackEmoji;
                 };
 
-                // 显式设置 src 触发加载
                 img.src = personality.emoji;
             } else {
-                // data.js 中存的是 emoji 文本（如 🏓），直接显示
-                emojiEl.textContent = personality.emoji || '🏓';
+                emojiEl.textContent = personality.emoji || fallbackEmoji;
             }
 
             const traitsList = document.getElementById('traitsList');
@@ -772,39 +805,60 @@
                 showToast('支付成功！报告已解锁');
             }
 
-            // 保存二维码到相册（适配 iOS / 安卓 / PC）
+            // 保存二维码到相册（适配 iOS / 安卓 / PC，处理 canvas 生成的二维码）
             async function saveQrCode() {
-                const img = document.getElementById('qrCode');
-                if (!img || !img.src) {
+                const qrCodeContainer = document.getElementById('qrCode');
+                if (!qrCodeContainer) {
+                    showToast('二维码容器未找到');
+                    return;
+                }
+                
+                // 查找 canvas 元素（二维码是通过 canvas 生成的）
+                const canvas = qrCodeContainer.querySelector('canvas');
+                if (!canvas) {
                     showToast('二维码尚未生成，请稍后再试');
                     return;
                 }
 
+                // 将 canvas 转为图片 URL
+                const qrDataUrl = canvas.toDataURL('image/png');
+
                 // 统一提示语：iOS 走"长按保存"路径，安卓/PC 走"自动下载"
                 if (isMobile() && /iphone|ipad|ipod/i.test(navigator.userAgent.toLowerCase())) {
-                    // iOS：微信/浏览器直接触发 download 会被拦截，这里直接用 a[download] 尝试
-                    // iOS Safari 13+ 已支持 <a download>，但跨域图床仍会被拦截
-                    // 兜底：告知用户在弹窗里的图片上"长按 → 存储图像"
-                    showToast('iPhone 用户：请长按上方二维码图片 → 选择"存储图像"');
+                    // iOS：打开新窗口显示图片，让用户长按保存
+                    const newWindow = window.open('', '_blank');
+                    if (newWindow) {
+                        newWindow.document.write(`
+                            <!DOCTYPE html><html><head><meta charset="UTF-8">
+                            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                            <title>支付二维码</title>
+                            <style>body{margin:0;padding:24px;background:#fff;text-align:center;font-family:"PingFang SC","Microsoft YaHei",sans-serif;}
+                            img{max-width:100%;height:auto;border-radius:12px;box-shadow:0 4px 16px rgba(0,0,0,0.1);}
+                            p{margin-top:16px;color:#666;font-size:14px;line-height:1.6;}</style>
+                            </head><body>
+                            <img src="${qrDataUrl}" alt="支付二维码">
+                            <p>长按图片 → 选择"存储图像"</p>
+                            </body></html>
+                        `);
+                        newWindow.document.close();
+                        showToast('请在新窗口长按图片保存到相册');
+                    } else {
+                        showToast('请长按弹窗中的二维码图片保存');
+                    }
                     return;
                 }
 
                 try {
-                    // 尝试通过 fetch + blob 下载（PC / 大部分安卓浏览器可用）
-                    const response = await fetch(img.src, { mode: 'cors' });
-                    if (!response.ok) throw new Error('fetch failed');
-                    const blob = await response.blob();
-                    const url = URL.createObjectURL(blob);
+                    // 尝试通过 blob 下载（PC / 大部分安卓浏览器可用）
                     const link = document.createElement('a');
-                    link.href = url;
+                    link.href = qrDataUrl;
                     link.download = `MBTI_pay_qr_${currentOrderNo || Date.now()}.png`;
                     document.body.appendChild(link);
                     link.click();
                     document.body.removeChild(link);
-                    setTimeout(() => URL.revokeObjectURL(url), 1000);
                     showToast('二维码已下载，请打开微信扫一扫 → 相册 → 选该图片');
                 } catch (error) {
-                    // 跨域失败（虎皮椒图床可能未配 CORS）：兜底为新窗口展示
+                    // 兜底为新窗口展示
                     console.warn('Download QR failed, fallback to new tab:', error);
                     const newWindow = window.open('', '_blank');
                     if (newWindow) {
@@ -816,7 +870,7 @@
                             img{max-width:100%;height:auto;border-radius:12px;box-shadow:0 4px 16px rgba(0,0,0,0.1);}
                             p{margin-top:16px;color:#666;font-size:14px;line-height:1.6;}</style>
                             </head><body>
-                            <img src="${img.src}" alt="支付二维码">
+                            <img src="${qrDataUrl}" alt="支付二维码">
                             <p>安卓/iPad 用户：长按图片 → 保存到相册<br>电脑端：右键图片 → 图片另存为</p>
                             </body></html>
                         `);
@@ -843,10 +897,10 @@
                     currentOpenOrderId = order.openOrderId || '';
                     orderNoEl.textContent = currentOrderNo;
                     
-                    // 显示二维码
-                    qrCode.src = order.qrCodeUrl;
+                    // 生成二维码图片（虎皮椒返回的是支付链接，不是图片）
+                    generateQRCode(order.qrCodeUrl);
                     
-                    // 更新提示文字（明确路径：长按识别对 url_qrcode 无效）
+                    // 更新提示文字
                     qrHint.innerHTML = '请使用微信/支付宝【扫一扫】→【从相册选择二维码】完成支付。苹果手机用户请点下方按钮保存到相册后操作。';
                     saveQrBtn.style.display = 'block';
                     
@@ -890,7 +944,7 @@
                                 currentOrderNo = order.orderNo;
                                 currentOpenOrderId = order.openOrderId || '';
                                 orderNoEl.textContent = currentOrderNo;
-                                qrCode.src = order.qrCodeUrl;
+                                generateQRCode(order.qrCodeUrl);
                                 
                                 pollCount = 0;
                                 checkPaymentBtn.textContent = '已支付，点击验证';
@@ -937,7 +991,7 @@
                     currentOrderNo = order.orderNo;
                     currentOpenOrderId = order.openOrderId || '';
                     orderNoEl.textContent = currentOrderNo;
-                    qrCode.src = order.qrCodeUrl;
+                    generateQRCode(order.qrCodeUrl);
                     
                     pollCount = 0;
                     checkPaymentBtn.textContent = '已支付，点击验证';

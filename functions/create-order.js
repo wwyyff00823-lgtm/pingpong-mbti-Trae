@@ -30,9 +30,7 @@ function generateXhHash(params, hashkey) {
 }
 
 const ALLOWED_ORIGINS = [
-    'https://ping-mbti.netlify.app',
-    'http://localhost:8000',
-    'http://127.0.0.1:8000'
+    'https://ping-mbti.netlify.app'
 ];
 
 exports.handler = async function(event, context) {
@@ -69,13 +67,13 @@ exports.handler = async function(event, context) {
         return { statusCode: 400, headers, body: JSON.stringify({ code: -1, msg: "Missing userId" }) };
     }
     
-    // 服务端生成订单号（格式：PING + 时间戳 + 随机串 + MBTI + LEVEL + 用户标识前8位）
+    // 服务端生成订单号（格式：PING + 时间戳 + _ + 随机串 + _ + MBTI + _ + LEVEL + _ + 用户标识前8位）
     const timestamp = Date.now();
     const randomStr = crypto.randomBytes(4).toString('hex').toUpperCase();
-    const mbtiPart = (mbtiType || 'XXXX').substring(0, 4);
-    const levelPart = (userLevel || 'M').substring(0, 1).toUpperCase();
+    const mbtiPart = (mbtiType || 'XXXX').substring(0, 4).toUpperCase();
+    const levelPart = (userLevel || 'mid').substring(0, 4).toUpperCase();
     const userIdPart = userId.substring(0, 8).toUpperCase();
-    const order_no = `PING${timestamp}${randomStr}${mbtiPart}${levelPart}${userIdPart}`;
+    const order_no = `PING_${timestamp}_${randomStr}_${mbtiPart}_${levelPart}_${userIdPart}`;
 
     const time = Math.floor(Date.now() / 1000);
     const nonce_str = crypto.randomBytes(16).toString('hex');

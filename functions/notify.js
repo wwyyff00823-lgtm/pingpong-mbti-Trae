@@ -21,8 +21,7 @@ function generateXhHash(params, hashkey) {
 
 const ALLOWED_ORIGINS = [
     'https://api.xunhupay.com',
-    'https://ping-mbti.netlify.app',
-    'http://localhost:8000'
+    'https://ping-mbti.netlify.app'
 ];
 
 exports.handler = async function(event, context) {
@@ -79,25 +78,8 @@ exports.handler = async function(event, context) {
     delete paramsForSign.hash;
     
     const calculatedHash = generateXhHash(paramsForSign, APPSECRET);
-    let isVerified = calculatedHash === hash.toLowerCase();
     
-    // 尝试解码后再次验证
-    if (!isVerified) {
-        const paramsDecoded = { ...paramsForSign };
-        Object.keys(paramsDecoded).forEach(key => {
-            if (typeof paramsDecoded[key] === 'string') {
-                try {
-                    paramsDecoded[key] = decodeURIComponent(paramsDecoded[key]);
-                } catch (e) {}
-            }
-        });
-        const calculatedHashDecoded = generateXhHash(paramsDecoded, APPSECRET);
-        if (calculatedHashDecoded === hash.toLowerCase()) {
-            isVerified = true;
-        }
-    }
-    
-    if (!isVerified) {
+    if (calculatedHash !== hash.toLowerCase()) {
         console.log('Signature verification failed');
         return { statusCode: 200, body: JSON.stringify({ errcode: -1, errmsg: 'signature fail' }) };
     }
@@ -126,15 +108,15 @@ exports.handler = async function(event, context) {
             await store.set(trade_order_id, JSON.stringify(paymentData));
             console.log('Payment saved to Netlify Blobs');
             
-            // 从订单号解析 userId、MBTI 和 Level（格式：PING + timestamp(13) + random(8) + MBTI(4) + level(1) + userId(8)）
-            // 总长度 = 4 + 13 + 8 + 4 + 1 + 8 = 38
-            if (trade_order_id.length >= 38) {
-                const mbtiPart = trade_order_id.substring(trade_order_id.length - 13, trade_order_id.length - 9);
-                const levelShort = trade_order_id.substring(trade_order_id.length - 9, trade_order_id.length - 8);
-                const userIdPart = trade_order_id.substring(trade_order_id.length - 8);
-                // 订单号中的 1 字符 level 简写映射为完整字符串
-                const levelMap = { 'L': 'low', 'M': 'mid', 'H': 'high' };
-                const levelFull = levelMap[levelShort] || 'mid';
+            // 从订单号解析 userId、MBTI 和 Level（格式：PING_timestamp_random_MBTI_LEVEL_userId）
+            const parts = trade_order_id.split('_');
+            if (parts.length >= 6) {
+                const mbtiPart = parts[3] || 'XXXX';
+                const levelPart = parts[4] || 'MID';
+                const userIdPart = parts[5] || '';
+                
+                const levelMap = { 'LOW': 'low', 'MID': 'mid', 'HIGH': 'high' };
+                const levelFull = levelMap[levelPart] || 'mid';
                 const userPaymentKey = `paid_${userIdPart}_${mbtiPart}_${levelFull}`;
                 
                 // 存储用户支付记录（绑定 userId + MBTI + 完整 level）
