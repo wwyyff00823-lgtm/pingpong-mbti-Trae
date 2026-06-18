@@ -457,6 +457,77 @@
             text-align: center;
             margin-top: 8px;
         }
+        .share-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+        .share-modal.show {
+            opacity: 1;
+            visibility: visible;
+        }
+        .share-content {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            width: 90%;
+            max-width: 360px;
+            text-align: center;
+        }
+        .share-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 12px;
+        }
+        .share-mbti {
+            font-size: 16px;
+            color: #c41e3a;
+            font-weight: bold;
+            margin-bottom: 16px;
+        }
+        .share-textarea {
+            width: 100%;
+            height: 100px;
+            padding: 12px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            resize: none;
+            margin-bottom: 16px;
+            box-sizing: border-box;
+        }
+        .share-copy-btn {
+            background: #c41e3a;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            margin-bottom: 8px;
+            width: 100%;
+        }
+        .share-close-btn {
+            background: #f0f0f0;
+            color: #666;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            width: 100%;
+        }
     </style>
 </head>
 <body>
@@ -516,6 +587,7 @@
             </div>
         </div>
 
+        <button class="btn secondary" id="shareBtn">📤 分享结果</button>
         <button class="btn secondary" id="restartBtn">重新测试</button>
 
         <div class="footer">
@@ -528,7 +600,7 @@
         <div class="modal-content">
             <div class="modal-title">扫码支付 ¥9.9</div>
             <div class="qr-code-container">
-                <img id="qrCode" class="qr-code" src="" alt="支付二维码">
+                <div id="qrCode" class="qr-code"></div>
                 <div class="qr-hint" id="qrHint">📱 <strong>方式一（推荐）：</strong>点击下方按钮保存二维码 → 打开微信/支付宝「扫一扫」→ 右上角「从相册选择」<br>💪 <strong>方式二：</strong>长按二维码图片直接识别（微信/Safari支持）</div>
                 <button class="save-qr-btn" id="saveQrBtn">保存二维码到相册</button>
             </div>
@@ -651,8 +723,11 @@
             // 默认显示备用 emoji
             emojiEl.textContent = fallbackEmoji;
 
+            // 构建完整的图片URL
+            const basePath = window.location.origin + window.location.pathname.replace('result.html', '');
             const imagePath = personality.emoji || `image/${mbtiType}.png`;
-            console.log('Loading personality image:', imagePath);
+            const fullImagePath = basePath + imagePath;
+            console.log('Loading personality image:', fullImagePath);
             
             const img = new Image();
             img.alt = personality.name;
@@ -662,17 +737,25 @@
             img.style.borderRadius = '8px';
             img.style.border = '2px solid #f0f0f0';
 
+            // 设置超时机制
+            let loadTimeout = setTimeout(() => {
+                console.warn('Personality image load timeout:', fullImagePath);
+                emojiEl.textContent = fallbackEmoji;
+            }, 10000);
+
             img.onload = function() {
-                console.log('Personality image loaded successfully:', imagePath);
+                clearTimeout(loadTimeout);
+                console.log('Personality image loaded successfully:', fullImagePath);
                 emojiEl.textContent = '';
                 emojiEl.appendChild(img);
             };
             img.onerror = function() {
-                console.warn('Personality image failed to load:', imagePath, '- Using emoji fallback:', fallbackEmoji);
+                clearTimeout(loadTimeout);
+                console.warn('Personality image failed to load:', fullImagePath, '- Using emoji fallback:', fallbackEmoji);
                 emojiEl.textContent = fallbackEmoji;
             };
 
-            img.src = imagePath;
+            img.src = fullImagePath;
 
             const traitsList = document.getElementById('traitsList');
             traitsList.innerHTML = '';
@@ -1096,6 +1179,70 @@
                 // 清空当前订单上下文，避免下一次点"立刻付款"时残留旧值
                 currentOrderNo = '';
                 currentOpenOrderId = '';
+            });
+
+            // 分享结果
+            const shareBtn = document.getElementById('shareBtn');
+            shareBtn.addEventListener('click', async () => {
+                try {
+                    const personality = personalityData[mbtiType];
+                    if (!personality) {
+                        showToast('获取人格信息失败');
+                        return;
+                    }
+
+                    // 创建分享内容
+                    const shareContent = `
+我在乒乓球MBTI测试中测出了「${mbtiType} - ${personality.name}」！
+
+${personality.traits.slice(0, 2).join('\n')}
+
+快来测测你的乒乓球人格吧！
+测试链接：http://localhost:8000
+                    `.trim();
+
+                    // 尝试使用 Web Share API
+                    if (navigator.share) {
+                        await navigator.share({
+                            title: `乒乓球MBTI - ${mbtiType} ${personality.name}`,
+                            text: shareContent,
+                            url: 'http://localhost:8000'
+                        });
+                    } else {
+                        // 复制到剪贴板
+                        await navigator.clipboard.writeText(shareContent);
+                        showToast('分享内容已复制到剪贴板');
+                    }
+                } catch (error) {
+                    console.error('Share error:', error);
+                    // 降级方案：显示分享内容供用户手动复制
+                    const shareModal = document.createElement('div');
+                    shareModal.className = 'share-modal';
+                    shareModal.innerHTML = `
+                        <div class="share-content">
+                            <div class="share-title">分享测试结果</div>
+                            <div class="share-mbti">${mbtiType} - ${personalityData[mbtiType]?.name}</div>
+                            <textarea class="share-textarea" readonly>我在乒乓球MBTI测试中测出了「${mbtiType} - ${personalityData[mbtiType]?.name}」！快来测测你的乒乓球人格吧！测试链接：http://localhost:8000</textarea>
+                            <button class="share-copy-btn" id="copyShareBtn">复制内容</button>
+                            <button class="share-close-btn">关闭</button>
+                        </div>
+                    `;
+                    document.body.appendChild(shareModal);
+                    shareModal.classList.add('show');
+
+                    document.getElementById('copyShareBtn').addEventListener('click', async () => {
+                        const textarea = shareModal.querySelector('.share-textarea');
+                        textarea.select();
+                        document.execCommand('copy');
+                        showToast('已复制到剪贴板');
+                    });
+
+                    shareModal.addEventListener('click', (e) => {
+                        if (e.target === shareModal || e.target.classList.contains('share-close-btn')) {
+                            shareModal.remove();
+                        }
+                    });
+                }
             });
 
             // 重新测试
