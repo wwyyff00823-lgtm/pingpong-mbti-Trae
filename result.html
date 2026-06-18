@@ -6,35 +6,6 @@
     <title>乒乓球MBTI测试结果</title>
     <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
     <script>
-        // 全局函数：复制支付链接
-        function copyPayUrl() {
-            const input = document.getElementById('payUrlInput');
-            if (!input || !input.value) {
-                alert('支付链接尚未生成');
-                return;
-            }
-            
-            input.select();
-            input.setSelectionRange(0, 99999);
-            
-            if (navigator.clipboard) {
-                navigator.clipboard.writeText(input.value).then(function() {
-                    alert('支付链接已复制到剪贴板，请粘贴到浏览器打开');
-                }).catch(function(err) {
-                    console.error('复制失败:', err);
-                    alert('复制失败，请手动复制');
-                });
-            } else {
-                // 降级方案
-                try {
-                    document.execCommand('copy');
-                    alert('支付链接已复制到剪贴板');
-                } catch (err) {
-                    alert('复制失败，请手动复制链接');
-                }
-            }
-        }
-        
         // 备用 QRCode 库加载（如果主 CDN 失败）
         if (typeof QRCode === 'undefined') {
             (function() {
@@ -127,12 +98,17 @@
             text-align: center;
             font-size: 80px;
             margin-bottom: 24px;
-            animation: bounce 2s ease-in-out infinite;
+            width: 100%;
+            min-height: 150px;
         }
         .personality-emoji img {
-            width: 120px;
-            height: 120px;
+            width: 150px;
+            height: 150px;
             object-fit: contain;
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+            text-align: center;
         }
         @keyframes bounce {
             0%, 100% { transform: translateY(0); }
@@ -539,77 +515,6 @@
             text-align: center;
             margin-top: 8px;
         }
-        .share-modal {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.5);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
-            opacity: 0;
-            visibility: hidden;
-            transition: all 0.3s ease;
-        }
-        .share-modal.show {
-            opacity: 1;
-            visibility: visible;
-        }
-        .share-content {
-            background: white;
-            border-radius: 16px;
-            padding: 24px;
-            width: 90%;
-            max-width: 360px;
-            text-align: center;
-        }
-        .share-title {
-            font-size: 18px;
-            font-weight: bold;
-            color: #333;
-            margin-bottom: 12px;
-        }
-        .share-mbti {
-            font-size: 16px;
-            color: #c41e3a;
-            font-weight: bold;
-            margin-bottom: 16px;
-        }
-        .share-textarea {
-            width: 100%;
-            height: 100px;
-            padding: 12px;
-            border: 1px solid #e0e0e0;
-            border-radius: 8px;
-            font-size: 14px;
-            resize: none;
-            margin-bottom: 16px;
-            box-sizing: border-box;
-        }
-        .share-copy-btn {
-            background: #c41e3a;
-            color: white;
-            border: none;
-            padding: 12px 24px;
-            border-radius: 8px;
-            font-size: 14px;
-            cursor: pointer;
-            margin-bottom: 8px;
-            width: 100%;
-        }
-        .share-close-btn {
-            background: #f0f0f0;
-            color: #666;
-            border: none;
-            padding: 12px 24px;
-            border-radius: 8px;
-            font-size: 14px;
-            cursor: pointer;
-            width: 100%;
-        }
     </style>
 </head>
 <body>
@@ -679,7 +584,7 @@
             </div>
         </div>
 
-        <button class="btn secondary" id="shareBtn">📤 分享结果</button>
+        
         <button class="btn secondary" id="restartBtn">重新测试</button>
 
         <div class="footer">
@@ -693,11 +598,9 @@
             <div class="modal-title">扫码支付 ¥9.9</div>
             <div class="qr-code-container">
                 <div id="qrCode" class="qr-code"></div>
-                <div class="qr-hint" id="qrHint">📱 <strong>方式一（推荐）：</strong>点击下方按钮保存二维码 → 打开微信「扫一扫」→ 右上角「从相册选择」→ 完成支付<br>💪 <strong>方式二：</strong>点击二维码图片直接跳转到支付页面<br>📲 <strong>方式三：</strong>复制下方支付链接到浏览器打开</div>
-                <div class="pay-url-container" id="payUrlContainer" style="display:none;padding:10px;">
-                    <input type="text" id="payUrlInput" readonly style="width:100%;padding:8px;font-size:12px;border:1px solid #ccc;border-radius:4px;word-break:break-all;">
-                    <button style="width:100%;margin-top:8px;padding:8px;background:#c41e3a;color:white;border:none;border-radius:4px;" onclick="copyPayUrl()">复制支付链接</button>
-                </div>
+                <div class="qr-hint" id="qrHint">📱 <strong>推荐方式：</strong>点击下方"立即支付"按钮，跳转到支付页面后用微信扫码支付</div>
+                <button class="pay-now-btn" id="payNowBtn" style="width:100%;padding:12px;background:#c41e3a;color:white;border:none;border-radius:8px;font-size:16px;font-weight:bold;margin:10px 0;">立即支付 ¥9.9</button>
+                <div class="qr-hint" style="margin-top:10px;">或者使用二维码支付：</div>
                 <button class="save-qr-btn" id="saveQrBtn">保存二维码到相册</button>
             </div>
 
@@ -1000,9 +903,7 @@
             // 清空之前的内容
             qrCodeEl.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:200px;color:#999;font-size:14px;">正在生成二维码...</div>';
             
-            let generated = false;
-            
-            // 尝试方案1: qrcode@1.x 的 toCanvas API
+            // 方案1: qrcode@1.x 的 toCanvas API
             if (typeof QRCode !== 'undefined' && typeof QRCode.toCanvas === 'function') {
                 try {
                     const canvas = document.createElement('canvas');
@@ -1021,17 +922,19 @@
                     qrCodeEl.innerHTML = '';
                     qrCodeEl.appendChild(createClickableQR(canvas, text));
                     console.log('QR code generated with QRCode.toCanvas');
-                    generated = true;
+                    return;
                 } catch (error) {
                     console.error('QRCode.toCanvas failed:', error);
                 }
             }
             
-            // 如果方案1失败，尝试方案2: qrcodejs 库的 new QRCode() 构造函数
-            if (!generated && typeof QRCode !== 'undefined' && typeof QRCode === 'function') {
+            // 方案2: qrcodejs 库的 new QRCode() 构造函数
+            if (typeof QRCode !== 'undefined' && typeof QRCode === 'function') {
                 try {
+                    // 完全清空容器
                     qrCodeEl.innerHTML = '';
-                    // 使用qrcodejs库创建二维码（直接在容器内创建）
+                    
+                    // 使用qrcodejs库创建二维码
                     new QRCode(qrCodeEl, {
                         text: text,
                         width: 200,
@@ -1041,45 +944,32 @@
                         correctLevel: QRCode.CorrectLevel.L
                     });
                     
-                    // 延迟检查canvas是否生成成功
-                    setTimeout(() => {
-                        const canvas = qrCodeEl.querySelector('canvas');
-                        if (canvas) {
-                            console.log('QR code canvas found after delay');
-                        }
-                    }, 100);
-                    
                     console.log('QR code generated with new QRCode()');
-                    generated = true;
+                    return;
                 } catch (error) {
                     console.error('new QRCode() failed:', error);
                 }
             }
             
-            // 如果方案2失败，尝试方案3: 使用内置的简单QR码生成器
-            if (!generated) {
-                const simpleCanvas = generateSimpleQRCode(text, 200);
-                if (simpleCanvas) {
-                    qrCodeEl.innerHTML = '';
-                    qrCodeEl.appendChild(createClickableQR(simpleCanvas, text));
-                    console.log('QR code generated with built-in generator');
-                    generated = true;
-                }
+            // 方案3: 使用内置的简单QR码生成器
+            const simpleCanvas = generateSimpleQRCode(text, 200);
+            if (simpleCanvas) {
+                qrCodeEl.innerHTML = '';
+                qrCodeEl.appendChild(createClickableQR(simpleCanvas, text));
+                console.log('QR code generated with built-in generator');
+                return;
             }
             
-            // 如果所有方案都失败，显示支付链接供用户点击或复制
-            if (!generated) {
-                qrCodeEl.innerHTML = `
-                    <div style="text-align:center;padding:15px;">
-                        <p style="color:#c41e3a;margin-bottom:10px;font-weight:bold;">请点击下方链接支付</p>
-                        <a href="${text}" target="_blank" rel="noopener noreferrer" 
-                           style="display:inline-block;padding:10px 20px;background:#c41e3a;color:white;border-radius:8px;text-decoration:none;font-size:14px;">
-                            立即支付 ¥9.9
-                        </a>
-                        <p style="color:#999;font-size:12px;margin-top:10px;">点击后将跳转到支付页面</p>
-                    </div>
-                `;
-            }
+            // 所有方案都失败，显示支付链接
+            qrCodeEl.innerHTML = `
+                <div style="text-align:center;padding:15px;">
+                    <p style="color:#c41e3a;margin-bottom:10px;font-weight:bold;">请点击下方链接支付</p>
+                    <a href="${text}" target="_blank" rel="noopener noreferrer" 
+                       style="display:inline-block;padding:10px 20px;background:#c41e3a;color:white;border-radius:8px;text-decoration:none;font-size:14px;">
+                        立即支付 ¥9.9
+                    </a>
+                </div>
+            `;
         }
         
         // 创建可点击的二维码（点击跳转到支付页面）
@@ -1207,12 +1097,23 @@
                 return Math.round((dimensionScores[dim.key] / total) * 100);
             });
             
+            console.log('Radar chart scores:', scores);
+            
             const canvas = document.getElementById('radarChart');
+            if (!canvas) {
+                console.error('Radar chart canvas not found');
+                return;
+            }
+            
             const ctx = canvas.getContext('2d');
             const container = canvas.parentElement;
-            const size = Math.min(container.clientWidth, container.clientHeight);
+            
+            // 使用固定尺寸，避免容器尺寸为0的问题
+            const size = 280;
             canvas.width = size;
             canvas.height = size;
+            canvas.style.width = size + 'px';
+            canvas.style.height = size + 'px';
             
             const centerX = size / 2;
             const centerY = size / 2;
@@ -1401,12 +1302,6 @@
                 const data = await response.json();
                 if (data.code === 0) {
                     const payUrl = data.url_qrcode || data.url || data.pay_url;
-                    // 保存支付URL供后续使用
-                    currentPayUrl = payUrl;
-                    // 显示支付链接输入框
-                    document.getElementById('payUrlInput').value = payUrl;
-                    document.getElementById('payUrlContainer').style.display = 'block';
-                    
                     return {
                         success: true,
                         orderNo: data.order_no,
@@ -1560,6 +1455,28 @@
             }
 
             saveQrBtn.addEventListener('click', saveQrCode);
+            
+            // 立即支付按钮 - 直接跳转到支付页面
+            const payNowBtn = document.getElementById('payNowBtn');
+            payNowBtn.addEventListener('click', async () => {
+                if (!currentPayUrl) {
+                    // 如果还没有支付链接，先创建订单
+                    const order = await createOrder();
+                    if (!order || !order.success) {
+                        showToast(order?.message || '创建订单失败');
+                        return;
+                    }
+                    currentPayUrl = order.payUrl;
+                }
+                
+                // 直接跳转到支付页面
+                if (currentPayUrl) {
+                    window.open(currentPayUrl, '_blank', 'noopener,noreferrer');
+                    showToast('已跳转到支付页面，请完成支付后返回');
+                } else {
+                    showToast('支付链接获取失败，请重试');
+                }
+            });
 
             // 点击解锁按钮
             unlockBtn.addEventListener('click', async () => {
@@ -1572,15 +1489,13 @@
                     
                     currentOrderNo = order.orderNo;
                     currentOpenOrderId = order.openOrderId || '';
+                    currentPayUrl = order.payUrl;
                     orderNoEl.textContent = currentOrderNo;
                     
-                    // 生成二维码图片（虎皮椒返回的是支付链接，不是图片）
+                    // 生成二维码图片
                     generateQRCode(order.qrCodeUrl);
                     
-                    // 更新提示文字
-                    qrHint.innerHTML = '📱 <strong>方式一（推荐）：</strong>点击下方按钮保存二维码 → 打开微信/支付宝「扫一扫」→ 右上角「从相册选择」<br>💪 <strong>方式二：</strong>长按二维码图片直接识别（微信/Safari支持）';
-                    saveQrBtn.style.display = 'block';
-                    
+                    // 显示支付弹窗
                     paymentModal.classList.add('show');
                     pollCount = 0;
                     startPolling();
@@ -1720,72 +1635,6 @@
                 // 清空当前订单上下文，避免下一次点"立刻付款"时残留旧值
                 currentOrderNo = '';
                 currentOpenOrderId = '';
-            });
-
-            // 分享结果
-            const shareBtn = document.getElementById('shareBtn');
-            shareBtn.addEventListener('click', async () => {
-                try {
-                    const personality = personalityData[mbtiType];
-                    if (!personality) {
-                        showToast('获取人格信息失败');
-                        return;
-                    }
-
-                    // 创建分享内容
-                    const currentUrl = `${window.location.protocol}//${window.location.host}`;
-                    const shareContent = `
-我在乒乓球MBTI测试中测出了「${mbtiType} - ${personality.name}」！
-
-${personality.traits.slice(0, 2).join('\n')}
-
-快来测测你的乒乓球人格吧！
-测试链接：${currentUrl}
-                    `.trim();
-
-                    // 尝试使用 Web Share API
-                    if (navigator.share) {
-                        const currentUrl = `${window.location.protocol}//${window.location.host}`;
-                        await navigator.share({
-                            title: `乒乓球MBTI - ${mbtiType} ${personality.name}`,
-                            text: shareContent,
-                            url: currentUrl
-                        });
-                    } else {
-                        // 复制到剪贴板
-                        await navigator.clipboard.writeText(shareContent);
-                        showToast('分享内容已复制到剪贴板');
-                    }
-                } catch (error) {
-                    console.error('Share error:', error);
-                    // 降级方案：显示分享内容供用户手动复制
-                    const shareModal = document.createElement('div');
-                    shareModal.className = 'share-modal';
-                    shareModal.innerHTML = `
-                        <div class="share-content">
-                            <div class="share-title">分享测试结果</div>
-                            <div class="share-mbti">${mbtiType} - ${personalityData[mbtiType]?.name}</div>
-                            <textarea class="share-textarea" readonly>我在乒乓球MBTI测试中测出了「${mbtiType} - ${personalityData[mbtiType]?.name}」！快来测测你的乒乓球人格吧！测试链接：${window.location.protocol}//${window.location.host}</textarea>
-                            <button class="share-copy-btn" id="copyShareBtn">复制内容</button>
-                            <button class="share-close-btn">关闭</button>
-                        </div>
-                    `;
-                    document.body.appendChild(shareModal);
-                    shareModal.classList.add('show');
-
-                    document.getElementById('copyShareBtn').addEventListener('click', async () => {
-                        const textarea = shareModal.querySelector('.share-textarea');
-                        textarea.select();
-                        document.execCommand('copy');
-                        showToast('已复制到剪贴板');
-                    });
-
-                    shareModal.addEventListener('click', (e) => {
-                        if (e.target === shareModal || e.target.classList.contains('share-close-btn')) {
-                            shareModal.remove();
-                        }
-                    });
-                }
             });
 
             // 重新测试
