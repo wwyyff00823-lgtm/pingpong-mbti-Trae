@@ -702,7 +702,7 @@
             setTimeout(() => toast.classList.remove('show'), 2000);
         }
 
-        // 简单的QR码生成器（备用方案）
+        // 使用Canvas API绘制二维码（可靠的备用方案）
         function generateSimpleQRCode(text, size = 200) {
             const qrCodeEl = document.getElementById('qrCode');
             if (!qrCodeEl || !text) {
@@ -716,25 +716,34 @@
                 canvas.height = size;
                 const ctx = canvas.getContext('2d');
                 
-                const modules = qrCodeEncode(text);
-                if (!modules) {
-                    console.error('Failed to encode QR code');
+                // 使用UTF-8编码数据
+                const data = textToBinary(text);
+                if (!data || data.length > 256) {
+                    console.error('Data too long or encoding failed');
                     return null;
                 }
                 
-                const moduleSize = size / modules.length;
-                const margin = Math.floor(moduleSize * 4);
+                // 创建二维码模块矩阵 (版本1: 21x21)
+                const modules = createQRCodeMatrix(data);
+                if (!modules) {
+                    console.error('Failed to create QR code matrix');
+                    return null;
+                }
+                
+                const moduleCount = modules.length;
+                const moduleSize = size / (moduleCount + 8); // 4个模块边距
+                const margin = moduleSize * 4;
                 
                 ctx.fillStyle = '#ffffff';
                 ctx.fillRect(0, 0, size, size);
                 
                 ctx.fillStyle = '#000000';
-                for (let y = 0; y < modules.length; y++) {
-                    for (let x = 0; x < modules[y].length; x++) {
+                for (let y = 0; y < moduleCount; y++) {
+                    for (let x = 0; x < moduleCount; x++) {
                         if (modules[y][x]) {
                             const px = margin + x * moduleSize;
                             const py = margin + y * moduleSize;
-                            ctx.fillRect(px, py, moduleSize - 1, moduleSize - 1);
+                            ctx.fillRect(px, py, moduleSize - 0.5, moduleSize - 0.5);
                         }
                     }
                 }
@@ -746,81 +755,192 @@
             }
         }
         
-        // QR码编码简化版（仅支持数字、字母和部分符号）
-        function qrCodeEncode(text) {
+        // 将文本转换为二进制字符串
+        function textToBinary(text) {
             try {
-                const version = 1;
-                const maskPattern = 0;
-                const modules = Array(21).fill(null).map(() => Array(21).fill(false));
+                const encoder = new TextEncoder('utf-8');
+                const bytes = encoder.encode(text);
                 
-                // 添加定位图案
-                for (let i = 0; i < 7; i++) {
-                    for (let j = 0; j < 7; j++) {
-                        if ((i < 7 && j < 7) || (i < 7 && j > 13) || (i > 13 && j < 7)) {
-                            modules[i][j] = (i < 5 && i > 0 && j < 5 && j > 0) ? (i !== 2 || j !== 2) : true;
-                        }
-                    }
+                let binary = '0100'; // 模式指示符: 字节模式
+                
+                // 添加字符计数（版本1最多7089字符，但我们只用小容量）
+                const length = bytes.length;
+                if (length < 1 << 8) {
+                    binary += padLeft(length.toString(2), 8);
+                } else {
+                    binary += padLeft(length.toString(2), 16);
                 }
                 
-                // 添加格式信息
-                const formatString = '101010000010010';
-                let formatIndex = 0;
-                for (let i = 0; i < 21; i++) {
-                    if (i < 9 && (i === 6 || modules[8][i] === undefined)) {
-                        if (formatIndex < formatString.length) {
-                            modules[8][i] = formatString[formatIndex++] === '1';
-                        }
-                    }
-                    if (i < 9 && (i === 6 || modules[i][8] === undefined)) {
-                        if (formatIndex < formatString.length) {
-                            modules[i][8] = formatString[formatIndex++] === '1';
-                        }
-                    }
+                // 添加数据字节
+                for (let i = 0; i < bytes.length; i++) {
+                    binary += padLeft(bytes[i].toString(2), 8);
                 }
                 
-                // 简单的数据编码
-                let data = [];
-                for (let i = 0; i < text.length; i++) {
-                    const charCode = text.charCodeAt(i);
-                    if (charCode >= 48 && charCode <= 57) {
-                        data.push(charCode - 48);
-                    } else if (charCode >= 65 && charCode <= 90) {
-                        data.push(charCode - 55);
-                    } else if (charCode >= 97 && charCode <= 122) {
-                        data.push(charCode - 87);
-                    } else if (charCode === 32) {
-                        data.push(36);
-                    } else if (charCode === 46) {
-                        data.push(37);
-                    } else if (charCode === 45) {
-                        data.push(38);
-                    } else if (charCode === 95) {
-                        data.push(39);
-                    } else {
-                        data.push(36);
-                    }
+                // 添加终止符
+                binary += '0000';
+                
+                // 添加填充
+                const totalBits = 21 * 21 * 8 / 8; // 版本1容量
+                while (binary.length % 8 !== 0) {
+                    binary += '0';
                 }
                 
-                // 将数据填入二维码（简化版）
-                let dataIndex = 0;
-                for (let y = 0; y < 21; y += 2) {
-                    for (let x = y % 4 === 0 ? 20 : 0; y % 4 === 0 ? x >= 0 : x < 21; y % 4 === 0 ? x-- : x++) {
-                        if (modules[y][x] === false) {
-                            if (dataIndex < data.length) {
-                                modules[y][x] = (data[dataIndex] & 1) === 1;
-                                data[dataIndex] >>= 1;
-                                if ((data[dataIndex] === 0) && (dataIndex % 2 === 1)) {
-                                    dataIndex++;
-                                }
-                            }
-                        }
-                    }
-                }
-                
-                return modules;
+                return binary;
             } catch (error) {
-                console.error('QR code encoding error:', error);
+                console.error('Text encoding error:', error);
                 return null;
+            }
+        }
+        
+        // 左填充字符串
+        function padLeft(str, length) {
+            while (str.length < length) {
+                str = '0' + str;
+            }
+            return str;
+        }
+        
+        // 创建二维码矩阵
+        function createQRCodeMatrix(data) {
+            const size = 21; // 版本1
+            const modules = Array(size).fill(null).map(() => Array(size).fill(false));
+            
+            // 添加定位图案 (3个角)
+            addPositionDetectionPattern(modules, 0, 0);
+            addPositionDetectionPattern(modules, size - 7, 0);
+            addPositionDetectionPattern(modules, 0, size - 7);
+            
+            // 添加分隔符
+            addSeparator(modules, 0, 0);
+            addSeparator(modules, size - 7, 0);
+            addSeparator(modules, 0, size - 7);
+            
+            // 添加对齐图案（版本1不需要）
+            
+            // 添加时序图案
+            addTimingPattern(modules);
+            
+            // 添加格式信息
+            addFormatInfo(modules, 0); // mask 0
+            
+            // 填充数据
+            fillData(modules, data);
+            
+            // 应用掩码（版本1只用mask 0）
+            applyMask(modules, 0);
+            
+            return modules;
+        }
+        
+        // 添加定位图案
+        function addPositionDetectionPattern(modules, x, y) {
+            for (let i = 0; i < 7; i++) {
+                for (let j = 0; j < 7; j++) {
+                    const isBorder = i === 0 || i === 6 || j === 0 || j === 6;
+                    const isCenter = i >= 2 && i <= 4 && j >= 2 && j <= 4;
+                    modules[y + i][x + j] = isBorder || isCenter;
+                }
+            }
+        }
+        
+        // 添加分隔符
+        function addSeparator(modules, x, y) {
+            for (let i = -1; i <= 7; i++) {
+                if (y - 1 >= 0) modules[y - 1][x + i] = false;
+                if (y + 7 < modules.length) modules[y + 7][x + i] = false;
+                if (x - 1 >= 0) modules[y + i][x - 1] = false;
+                if (x + 7 < modules[0].length) modules[y + i][x + 7] = false;
+            }
+        }
+        
+        // 添加时序图案
+        function addTimingPattern(modules) {
+            for (let i = 8; i < modules.length - 8; i++) {
+                modules[6][i] = i % 2 === 0;
+                modules[i][6] = i % 2 === 0;
+            }
+        }
+        
+        // 添加格式信息
+        function addFormatInfo(modules, maskPattern) {
+            const formatString = getFormatString(maskPattern);
+            let idx = 0;
+            
+            for (let i = 0; i < 9; i++) {
+                if (i !== 6) modules[8][i] = formatString[idx++] === '1';
+            }
+            for (let i = 8; i >= 0; i--) {
+                if (i !== 6) modules[i][8] = formatString[idx++] === '1';
+            }
+            for (let i = modules.length - 1; i >= modules.length - 7; i--) {
+                modules[8][i] = formatString[idx++] === '1';
+            }
+            for (let i = modules.length - 8; i < modules.length; i++) {
+                modules[i][8] = formatString[idx++] === '1';
+            }
+        }
+        
+        // 获取格式字符串
+        function getFormatString(maskPattern) {
+            const errorLevel = 0; // L级
+            const data = (errorLevel << 3) | maskPattern;
+            const polynomial = 0x537;
+            
+            let remainder = data << 10;
+            for (let i = 9; i >= 0; i--) {
+                if ((remainder >> (10 + i)) & 1) {
+                    remainder ^= polynomial << i;
+                }
+            }
+            
+            const formatCode = ((data << 10) | remainder) ^ 0x5412;
+            return padLeft(formatCode.toString(2), 15);
+        }
+        
+        // 填充数据
+        function fillData(modules, data) {
+            let bitIndex = 0;
+            const size = modules.length;
+            
+            for (let y = size - 1; y >= 0; y -= 2) {
+                for (let x = size - 1; x >= 0; x--) {
+                    const actualX = (y % 4 === 0 || y % 4 === 3) ? x : size - 1 - x;
+                    
+                    // 跳过固定图案区域
+                    if (isFixedPattern(modules, actualX, y)) continue;
+                    if (isFixedPattern(modules, actualX, y - 1)) continue;
+                    
+                    if (bitIndex < data.length) {
+                        modules[y][actualX] = data[bitIndex++] === '1';
+                    }
+                    if (y - 1 >= 0 && bitIndex < data.length) {
+                        modules[y - 1][actualX] = data[bitIndex++] === '1';
+                    }
+                }
+            }
+        }
+        
+        // 检查是否为固定图案
+        function isFixedPattern(modules, x, y) {
+            // 定位图案区域
+            const isCorner = (x < 7 && y < 7) || 
+                           (x > modules.length - 8 && y < 7) || 
+                           (x < 7 && y > modules.length - 8);
+            // 时序图案
+            const isTiming = x === 6 || y === 6;
+            return isCorner || isTiming;
+        }
+        
+        // 应用掩码
+        function applyMask(modules, maskPattern) {
+            const size = modules.length;
+            for (let y = 0; y < size; y++) {
+                for (let x = 0; x < size; x++) {
+                    // Mask 0: (x + y) % 2 === 0
+                    if ((x + y) % 2 === 0) {
+                        modules[y][x] = !modules[y][x];
+                    }
+                }
             }
         }
 
@@ -907,8 +1027,8 @@
 
             // 构建完整的图片URL
             const basePath = window.location.origin + window.location.pathname.replace('result.html', '');
-            const imagePath = personality.emoji || `image/${mbtiType}.png`;
-            const fullImagePath = basePath + imagePath;
+            const imageFileName = `${mbtiType}.png`;
+            const fullImagePath = basePath + 'image/' + imageFileName;
             console.log('Loading personality image:', fullImagePath);
             
             const img = new Image();
