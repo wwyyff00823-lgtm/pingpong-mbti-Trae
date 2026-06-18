@@ -6,6 +6,35 @@
     <title>乒乓球MBTI测试结果</title>
     <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
     <script>
+        // 全局函数：复制支付链接
+        function copyPayUrl() {
+            const input = document.getElementById('payUrlInput');
+            if (!input || !input.value) {
+                alert('支付链接尚未生成');
+                return;
+            }
+            
+            input.select();
+            input.setSelectionRange(0, 99999);
+            
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(input.value).then(function() {
+                    alert('支付链接已复制到剪贴板，请粘贴到浏览器打开');
+                }).catch(function(err) {
+                    console.error('复制失败:', err);
+                    alert('复制失败，请手动复制');
+                });
+            } else {
+                // 降级方案
+                try {
+                    document.execCommand('copy');
+                    alert('支付链接已复制到剪贴板');
+                } catch (err) {
+                    alert('复制失败，请手动复制链接');
+                }
+            }
+        }
+        
         // 备用 QRCode 库加载（如果主 CDN 失败）
         if (typeof QRCode === 'undefined') {
             (function() {
@@ -395,6 +424,16 @@
             border: 2px solid #f0f0f0;
             border-radius: 12px;
             margin: 0 auto;
+            background: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 200px;
+        }
+        .qr-code canvas {
+            max-width: 100%;
+            max-height: 100%;
+            display: block !important;
         }
         .qr-hint {
             font-size: 13px;
@@ -654,7 +693,11 @@
             <div class="modal-title">扫码支付 ¥9.9</div>
             <div class="qr-code-container">
                 <div id="qrCode" class="qr-code"></div>
-                <div class="qr-hint" id="qrHint">📱 <strong>方式一（推荐）：</strong>点击下方按钮保存二维码 → 打开微信「扫一扫」→ 右上角「从相册选择」<br>💪 <strong>方式二：</strong>长按二维码图片直接识别（微信/Safari支持）<br>🔗 <strong>方式三：</strong>点击二维码图片跳转到支付页面</div>
+                <div class="qr-hint" id="qrHint">📱 <strong>方式一（推荐）：</strong>点击下方按钮保存二维码 → 打开微信「扫一扫」→ 右上角「从相册选择」→ 完成支付<br>💪 <strong>方式二：</strong>点击二维码图片直接跳转到支付页面<br>📲 <strong>方式三：</strong>复制下方支付链接到浏览器打开</div>
+                <div class="pay-url-container" id="payUrlContainer" style="display:none;padding:10px;">
+                    <input type="text" id="payUrlInput" readonly style="width:100%;padding:8px;font-size:12px;border:1px solid #ccc;border-radius:4px;word-break:break-all;">
+                    <button style="width:100%;margin-top:8px;padding:8px;background:#c41e3a;color:white;border:none;border-radius:4px;" onclick="copyPayUrl()">复制支付链接</button>
+                </div>
                 <button class="save-qr-btn" id="saveQrBtn">保存二维码到相册</button>
             </div>
 
@@ -988,6 +1031,7 @@
             if (!generated && typeof QRCode !== 'undefined' && typeof QRCode === 'function') {
                 try {
                     qrCodeEl.innerHTML = '';
+                    // 使用qrcodejs库创建二维码（直接在容器内创建）
                     new QRCode(qrCodeEl, {
                         text: text,
                         width: 200,
@@ -997,12 +1041,14 @@
                         correctLevel: QRCode.CorrectLevel.L
                     });
                     
-                    // 为生成的二维码添加点击跳转功能
-                    const canvas = qrCodeEl.querySelector('canvas');
-                    if (canvas) {
-                        qrCodeEl.innerHTML = '';
-                        qrCodeEl.appendChild(createClickableQR(canvas, text));
-                    }
+                    // 延迟检查canvas是否生成成功
+                    setTimeout(() => {
+                        const canvas = qrCodeEl.querySelector('canvas');
+                        if (canvas) {
+                            console.log('QR code canvas found after delay');
+                        }
+                    }, 100);
+                    
                     console.log('QR code generated with new QRCode()');
                     generated = true;
                 } catch (error) {
@@ -1089,13 +1135,12 @@
             const emojiEl = document.getElementById('personalityEmoji');
             emojiEl.innerHTML = '';
             
-            // 默认显示备用 emoji
+            // 默认显示备用 emoji（确保用户总能看到内容）
             emojiEl.textContent = fallbackEmoji;
+            emojiEl.style.fontSize = '80px';
+            emojiEl.style.textAlign = 'center';
 
-            // 构建完整的图片URL（使用绝对路径）
-            const fullImagePath = `${window.location.origin}/image/${mbtiType}.png`;
-            console.log('Loading personality image:', fullImagePath);
-            
+            // 尝试加载图片
             const img = new Image();
             img.alt = personality.name;
             img.style.width = '150px';
@@ -1107,23 +1152,26 @@
 
             // 设置超时机制
             let loadTimeout = setTimeout(() => {
-                console.warn('Personality image load timeout:', fullImagePath);
+                console.warn('Personality image load timeout');
                 emojiEl.textContent = fallbackEmoji;
-            }, 10000);
+            }, 5000);
 
             img.onload = function() {
                 clearTimeout(loadTimeout);
-                console.log('Personality image loaded successfully:', fullImagePath);
+                console.log('Personality image loaded successfully');
                 emojiEl.textContent = '';
+                emojiEl.style.fontSize = '';
                 emojiEl.appendChild(img);
             };
             img.onerror = function(event) {
                 clearTimeout(loadTimeout);
-                console.error('Personality image failed to load:', fullImagePath, 'Error:', event);
-                console.warn('Falling back to emoji:', fallbackEmoji);
+                console.error('Personality image failed to load, using emoji fallback:', fallbackEmoji);
                 emojiEl.textContent = fallbackEmoji;
             };
 
+            // 构建完整的图片URL（使用绝对路径）
+            const fullImagePath = `${window.location.origin}/image/${mbtiType}.png`;
+            console.log('Loading personality image:', fullImagePath);
             img.src = fullImagePath;
 
             const traitsList = document.getElementById('traitsList');
@@ -1352,12 +1400,19 @@
                 });
                 const data = await response.json();
                 if (data.code === 0) {
+                    const payUrl = data.url_qrcode || data.url || data.pay_url;
+                    // 保存支付URL供后续使用
+                    currentPayUrl = payUrl;
+                    // 显示支付链接输入框
+                    document.getElementById('payUrlInput').value = payUrl;
+                    document.getElementById('payUrlContainer').style.display = 'block';
+                    
                     return {
                         success: true,
                         orderNo: data.order_no,
                         openOrderId: data.open_order_id || '',
-                        qrCodeUrl: data.url_qrcode || data.pay_url,
-                        payUrl: data.url || data.pay_url,
+                        qrCodeUrl: payUrl,
+                        payUrl: payUrl,
                         price: data.price || 9.9
                     };
                 } else {
@@ -1409,6 +1464,7 @@
             let currentOpenOrderId = '';
             let pollInterval = null;
             let pollCount = 0;
+            let currentPayUrl = '';
 
             function stopPolling() {
                 if (pollInterval) {
