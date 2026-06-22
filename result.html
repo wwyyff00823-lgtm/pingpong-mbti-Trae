@@ -898,8 +898,13 @@
             }
         }
 
+        // 判断是否为移动端设备
+        function isMobileDevice() {
+            return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        }
+
         // 创建订单
-        async function createOrder() {
+        async function createOrder(payType = 'wechat') {
             try {
                 const userId = localStorage.getItem('userId');
                 const response = await fetch('/.netlify/functions/create-order', {
@@ -908,18 +913,28 @@
                     body: JSON.stringify({ 
                         mbtiType: mbtiType,
                         userLevel: userLevel,
-                        userId: userId
+                        userId: userId,
+                        payType: payType
                     })
                 });
                 const data = await response.json();
                 if (data.code === 0) {
-                    const payUrl = data.url_qrcode || data.url || data.pay_url;
+                    // 根据虎皮椒文档区分：
+                    // url_qrcode: PC端使用的二维码地址
+                    // url: 手机端专用的请求URL（系统会自动判断并返回二维码）
+                    const isMobile = isMobileDevice();
+                    const qrCodeUrl = data.url_qrcode || '';       // PC端二维码地址
+                    const mobileUrl = data.url || '';               // 手机端URL
+                    const payUrl = isMobile ? mobileUrl || qrCodeUrl : qrCodeUrl || mobileUrl;
+                    
                     return {
                         success: true,
                         orderNo: data.order_no,
                         openOrderId: data.open_order_id || '',
-                        qrCodeUrl: payUrl,
+                        qrCodeUrl: qrCodeUrl,
+                        mobileUrl: mobileUrl,
                         payUrl: payUrl,
+                        isMobile: isMobile,
                         price: data.price || 9.9
                     };
                 } else {
@@ -1069,18 +1084,21 @@
             // 微信支付按钮
             const wechatPayBtn = document.getElementById('wechatPayBtn');
             wechatPayBtn.addEventListener('click', async () => {
-                if (!currentPayUrl) {
-                    const order = await createOrder();
-                    if (!order || !order.success) {
-                        showToast(order?.message || '创建订单失败');
-                        return;
-                    }
-                    currentPayUrl = order.payUrl;
+                const order = await createOrder('wechat');
+                if (!order || !order.success) {
+                    showToast(order?.message || '创建订单失败');
+                    return;
                 }
+                
+                // 根据设备类型选择URL
+                const targetUrl = order.isMobile ? order.mobileUrl || order.qrCodeUrl : order.qrCodeUrl || order.mobileUrl;
+                currentPayUrl = targetUrl;
+                currentOrderNo = order.orderNo;
                 
                 if (currentPayUrl) {
                     window.open(currentPayUrl, '_blank', 'noopener,noreferrer');
-                    showToast('已跳转到微信支付页面，请完成支付后返回');
+                    const tip = order.isMobile ? '已跳转到支付页面，请完成支付后返回' : '已打开支付二维码，请使用微信扫码支付';
+                    showToast(tip);
                 } else {
                     showToast('支付链接获取失败，请重试');
                 }
@@ -1089,18 +1107,21 @@
             // 支付宝支付按钮
             const alipayBtn = document.getElementById('alipayBtn');
             alipayBtn.addEventListener('click', async () => {
-                if (!currentPayUrl) {
-                    const order = await createOrder();
-                    if (!order || !order.success) {
-                        showToast(order?.message || '创建订单失败');
-                        return;
-                    }
-                    currentPayUrl = order.payUrl;
+                const order = await createOrder('alipay');
+                if (!order || !order.success) {
+                    showToast(order?.message || '创建订单失败');
+                    return;
                 }
+                
+                // 根据设备类型选择URL
+                const targetUrl = order.isMobile ? order.mobileUrl || order.qrCodeUrl : order.qrCodeUrl || order.mobileUrl;
+                currentPayUrl = targetUrl;
+                currentOrderNo = order.orderNo;
                 
                 if (currentPayUrl) {
                     window.open(currentPayUrl, '_blank', 'noopener,noreferrer');
-                    showToast('已跳转到支付宝支付页面，请完成支付后返回');
+                    const tip = order.isMobile ? '已跳转到支付宝支付页面，请完成支付后返回' : '已打开支付二维码，请使用支付宝扫码支付';
+                    showToast(tip);
                 } else {
                     showToast('支付链接获取失败，请重试');
                 }

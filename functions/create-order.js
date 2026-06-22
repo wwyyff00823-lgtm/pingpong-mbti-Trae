@@ -61,13 +61,16 @@ exports.handler = async function(event, context) {
         return { statusCode: 400, headers, body: JSON.stringify({ code: -1, msg: "Invalid JSON" }) };
     }
 
-    // 只接受 mbtiType、userLevel 和 userId，用于生成订单号和记录
-    const { mbtiType, userLevel, userId } = body;
+    // 只接受 mbtiType、userLevel、userId 和 payType，用于生成订单号和记录
+    const { mbtiType, userLevel, userId, payType } = body;
     
     // 验证userId存在
     if (!userId) {
         return { statusCode: 400, headers, body: JSON.stringify({ code: -1, msg: "Missing userId" }) };
     }
+    
+    // 支付渠道：wechat=微信，alipay=支付宝
+    const paymentType = payType === 'alipay' ? 'alipay' : 'wechat';
     
     // 服务端生成订单号（格式：PING + 时间戳 + _ + 随机串 + _ + MBTI + _ + LEVEL + _ + 用户标识前8位）
     const timestamp = Date.now();
@@ -89,7 +92,8 @@ exports.handler = async function(event, context) {
         time: time,
         notify_url: NOTIFY_URL,
         return_url: RETURN_URL,
-        nonce_str: nonce_str
+        nonce_str: nonce_str,
+        type: paymentType  // 指定支付渠道
     };
 
     const hash = generateXhHash(params, APPSECRET);
@@ -128,17 +132,22 @@ exports.handler = async function(event, context) {
         }
 
         const openOrderId = ret.open_order_id || ret.order_id || '';
-        const qrCodeUrl = ret.url_qrcode || ret.url || ret.pay_url;
 
-        if (qrCodeUrl) {
+        // 根据虎皮椒文档区分：
+        // url_qrcode: PC端使用的二维码地址
+        // url: 手机端专用的请求URL（系统会自动判断并返回二维码）
+        const pcQrCodeUrl = ret.url_qrcode;
+        const mobileUrl = ret.url;
+
+        if (pcQrCodeUrl || mobileUrl) {
             return { statusCode: 200, headers, body: JSON.stringify({ 
                 code: 0, 
-                url_qrcode: qrCodeUrl,
-                url: ret.url,
-                pay_url: qrCodeUrl,
+                url_qrcode: pcQrCodeUrl || '',  // PC端二维码地址
+                url: mobileUrl || '',             // 手机端专用URL
+                pay_url: mobileUrl || pcQrCodeUrl, // 默认使用手机端URL
                 order_no: order_no,
                 open_order_id: openOrderId,
-                price: PRICE_YUAN,  // 返回给前端显示（仅显示用途）
+                price: PRICE_YUAN,
                 expires_at: new Date(Date.now() + 30 * 60 * 1000).toISOString()
             }) };
         } else {
