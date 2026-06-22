@@ -1,8 +1,8 @@
 const crypto = require('crypto');
 const qs = require('querystring');
 
-// 虎皮椒API地址
-const API_URL = "https://api.xunhupay.com/payment/do.html";
+// 虎皮椒API地址（新版）
+const API_URL = "https://api.xunhunet.com/payment/do.html";
 
 // 环境变量
 const APPID = process.env.HUPIJIAO_APPID;
