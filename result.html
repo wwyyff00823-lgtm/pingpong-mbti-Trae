@@ -925,7 +925,7 @@
                     const isMobile = isMobileDevice();
                     const qrCodeUrl = data.url_qrcode || '';       // PC端二维码地址
                     const mobileUrl = data.url || '';               // 手机端URL
-                    const payUrl = isMobile ? mobileUrl || qrCodeUrl : qrCodeUrl || mobileUrl;
+                    const payUrl = isMobile ? mobileUrl : qrCodeUrl;
                     
                     return {
                         success: true,
@@ -1091,7 +1091,7 @@
                 }
                 
                 // 根据设备类型选择URL
-                const targetUrl = order.isMobile ? order.mobileUrl || order.qrCodeUrl : order.qrCodeUrl || order.mobileUrl;
+                const targetUrl = order.isMobile ? order.mobileUrl : order.qrCodeUrl;
                 currentPayUrl = targetUrl;
                 currentOrderNo = order.orderNo;
                 
@@ -1114,7 +1114,7 @@
                 }
                 
                 // 根据设备类型选择URL
-                const targetUrl = order.isMobile ? order.mobileUrl || order.qrCodeUrl : order.qrCodeUrl || order.mobileUrl;
+                const targetUrl = order.isMobile ? order.mobileUrl : order.qrCodeUrl;
                 currentPayUrl = targetUrl;
                 currentOrderNo = order.orderNo;
                 
