@@ -2,7 +2,7 @@ const crypto = require('crypto');
 const qs = require('querystring');
 
 // 虎皮椒API地址（新版）
-const API_URL = "https://api.xunhunet.com/payment/do.html";
+const API_URL = "https://api.dpweixin.com/payment/do.html";
 
 // 环境变量
 const APPID = process.env.HUPIJIAO_APPID;
@@ -72,13 +72,12 @@ exports.handler = async function(event, context) {
     // 支付渠道：wechat=微信，alipay=支付宝
     const paymentType = payType === 'alipay' ? 'alipay' : 'wechat';
     
-    // 服务端生成订单号（格式：PING + 时间戳 + _ + 随机串 + _ + MBTI + _ + LEVEL + _ + 用户标识前8位）
+    // 服务端生成订单号（格式：PING + 时间戳 + _ + 随机串 + _ + MBTI + _ + LEVEL + _ + 完整userId）
     const timestamp = Date.now();
     const randomStr = crypto.randomBytes(4).toString('hex').toUpperCase();
     const mbtiPart = (mbtiType || 'XXXX').substring(0, 4).toUpperCase();
     const levelPart = (userLevel || 'mid').substring(0, 4).toUpperCase();
-    const userIdPart = userId.substring(0, 8).toUpperCase();
-    const order_no = `PING_${timestamp}_${randomStr}_${mbtiPart}_${levelPart}_${userIdPart}`;
+    const order_no = `PING_${timestamp}_${randomStr}_${mbtiPart}_${levelPart}_${userId}`;
 
     const time = Math.floor(Date.now() / 1000);
     const nonce_str = crypto.randomBytes(16).toString('hex');

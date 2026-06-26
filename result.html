@@ -564,10 +564,18 @@
     <div class="modal-overlay" id="paymentModal">
         <div class="modal-content">
             <div class="modal-title">支付 ¥9.9</div>
-            <div class="payment-info">
+            
+            <div class="payment-method-section" id="paymentMethodSection">
                 <p style="text-align:center;color:#666;margin-bottom:20px;">选择一种支付方式完成付款</p>
                 <button class="pay-btn wechat" id="wechatPayBtn" style="width:100%;padding:14px;background:#07c160;color:white;border:none;border-radius:8px;font-size:16px;font-weight:bold;margin-bottom:12px;">微信支付</button>
                 <button class="pay-btn alipay" id="alipayBtn" style="width:100%;padding:14px;background:#1677ff;color:white;border:none;border-radius:8px;font-size:16px;font-weight:bold;">支付宝支付</button>
+            </div>
+
+            <div class="qr-section" id="qrSection" style="display:none;">
+                <div class="qr-hint" id="qrHint" style="text-align:center;color:#666;font-size:14px;margin-bottom:16px;"></div>
+                <div id="qrCode" style="display:flex;justify-content:center;margin-bottom:16px;"></div>
+                <button class="modal-btn secondary" id="saveQrBtn" style="background:#f5f5f5;color:#666;margin-top:0;">保存二维码到相册</button>
+                <button class="modal-btn secondary" id="retryPayBtn" style="background:#f5f5f5;color:#666;margin-top:8px;">更换支付方式</button>
             </div>
 
             <div class="order-info">
@@ -1081,58 +1089,63 @@
                 }
             }
 
-            // 微信支付按钮
-            const wechatPayBtn = document.getElementById('wechatPayBtn');
-            wechatPayBtn.addEventListener('click', async () => {
-                const order = await createOrder('wechat');
-                if (!order || !order.success) {
-                    showToast(order?.message || '创建订单失败');
-                    return;
-                }
-                
-                // 根据设备类型选择URL
-                const targetUrl = order.isMobile ? order.mobileUrl : order.qrCodeUrl;
-                currentPayUrl = targetUrl;
-                currentOrderNo = order.orderNo;
-                
-                if (currentPayUrl) {
-                    window.open(currentPayUrl, '_blank', 'noopener,noreferrer');
-                    const tip = order.isMobile ? '已跳转到支付页面，请完成支付后返回' : '已打开支付二维码，请使用微信扫码支付';
-                    showToast(tip);
-                } else {
-                    showToast('支付链接获取失败，请重试');
-                }
-            });
-            
-            // 支付宝支付按钮
-            const alipayBtn = document.getElementById('alipayBtn');
-            alipayBtn.addEventListener('click', async () => {
-                const order = await createOrder('alipay');
-                if (!order || !order.success) {
-                    showToast(order?.message || '创建订单失败');
-                    return;
-                }
-                
-                // 根据设备类型选择URL
-                const targetUrl = order.isMobile ? order.mobileUrl : order.qrCodeUrl;
-                currentPayUrl = targetUrl;
-                currentOrderNo = order.orderNo;
-                
-                if (currentPayUrl) {
-                    window.open(currentPayUrl, '_blank', 'noopener,noreferrer');
-                    const tip = order.isMobile ? '已跳转到支付宝支付页面，请完成支付后返回' : '已打开支付二维码，请使用支付宝扫码支付';
-                    showToast(tip);
-                } else {
-                    showToast('支付链接获取失败，请重试');
-                }
-            });
+            const paymentMethodSection = document.getElementById('paymentMethodSection');
+            const qrSection = document.getElementById('qrSection');
+            const retryPayBtn = document.getElementById('retryPayBtn');
 
-            // 点击解锁按钮
-            unlockBtn.addEventListener('click', async () => {
+            function showPaymentMethod() {
+                paymentMethodSection.style.display = 'block';
+                qrSection.style.display = 'none';
+                qrCode.innerHTML = '';
+            }
+
+            function showQRCode() {
+                paymentMethodSection.style.display = 'none';
+                qrSection.style.display = 'block';
+            }
+
+            function renderQRCode(url, payType) {
+                qrCode.innerHTML = '';
+                if (typeof QRCode !== 'undefined') {
+                    new QRCode(qrCode, {
+                        text: url,
+                        width: 240,
+                        height: 240,
+                        colorDark: '#000000',
+                        colorLight: '#ffffff',
+                        correctLevel: QRCode.CorrectLevel.H
+                    });
+                }
+                
+                const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent.toLowerCase());
+                const isMobile = isMobileDevice();
+                
+                let hintText = '';
+                if (payType === 'wechat') {
+                    if (isIOS) {
+                        hintText = '📱 iOS用户：长按上方二维码 → 选择"识别图中二维码" → 跳转微信支付';
+                    } else if (isMobile) {
+                        hintText = '📱 安卓用户：保存二维码后打开微信 → 扫一扫 → 相册 → 选择该图片';
+                    } else {
+                        hintText = '🖥️ 电脑端：使用微信扫一扫扫描上方二维码';
+                    }
+                } else {
+                    if (isIOS) {
+                        hintText = '📱 iOS用户：长按上方二维码 → 选择"识别图中二维码" → 跳转支付宝支付';
+                    } else if (isMobile) {
+                        hintText = '📱 安卓用户：保存二维码后打开支付宝 → 扫一扫 → 相册 → 选择该图片';
+                    } else {
+                        hintText = '🖥️ 电脑端：使用支付宝扫一扫扫描上方二维码';
+                    }
+                }
+                qrHint.textContent = hintText;
+            }
+
+            async function handlePayMethod(payType) {
                 try {
-                    const order = await createOrder();
+                    const order = await createOrder(payType);
                     if (!order || !order.success) {
-                        showToast(order?.message || '创建订单失败，请重试');
+                        showToast(order?.message || '创建订单失败');
                         return;
                     }
                     
@@ -1141,8 +1154,10 @@
                     currentPayUrl = order.payUrl;
                     orderNoEl.textContent = currentOrderNo;
                     
-                    // 显示支付弹窗
-                    paymentModal.classList.add('show');
+                    const qrUrl = order.qrCodeUrl || order.payUrl;
+                    renderQRCode(qrUrl, payType);
+                    showQRCode();
+                    
                     pollCount = 0;
                     startPolling();
                     
@@ -1150,6 +1165,33 @@
                     console.error('Payment error:', error);
                     showToast('支付操作失败，请重试');
                 }
+            }
+
+            // 微信支付按钮
+            const wechatPayBtn = document.getElementById('wechatPayBtn');
+            wechatPayBtn.addEventListener('click', () => {
+                handlePayMethod('wechat');
+            });
+            
+            // 支付宝支付按钮
+            const alipayBtn = document.getElementById('alipayBtn');
+            alipayBtn.addEventListener('click', () => {
+                handlePayMethod('alipay');
+            });
+
+            // 更换支付方式按钮
+            retryPayBtn.addEventListener('click', () => {
+                showPaymentMethod();
+            });
+
+            // 点击解锁按钮
+            unlockBtn.addEventListener('click', () => {
+                paymentModal.classList.add('show');
+                showPaymentMethod();
+                currentOrderNo = '';
+                currentOpenOrderId = '';
+                orderNoEl.textContent = '---';
+                stopPolling();
             });
 
             // 开始轮询
@@ -1158,7 +1200,6 @@
                 pollInterval = setInterval(async () => {
                     pollCount++;
                     
-                    // 显示轮询计数和倒计时
                     const remainingSeconds = Math.round((MAX_POLL_COUNT - pollCount) * POLL_INTERVAL / 1000);
                     pollCounter.textContent = `自动验证中 (${pollCount}/${MAX_POLL_COUNT})，剩余约${remainingSeconds}秒`;
                     
@@ -1168,7 +1209,6 @@
                         checkPaymentBtn.disabled = true;
                         checkPaymentBtn.textContent = '重新获取中...';
                         
-                        // 自动重新创建订单
                         setTimeout(async () => {
                             try {
                                 const order = await createOrder();
@@ -1184,12 +1224,15 @@
                                 currentPayUrl = order.payUrl;
                                 orderNoEl.textContent = currentOrderNo;
                                 
+                                const qrUrl = order.qrCodeUrl || order.payUrl;
+                                renderQRCode(qrUrl, 'wechat');
+                                
                                 pollCount = 0;
                                 checkPaymentBtn.textContent = '已支付，点击验证';
                                 checkPaymentBtn.disabled = false;
                                 pollCounter.textContent = `自动验证中 (${pollCount}/${MAX_POLL_COUNT})，剩余约${Math.round(MAX_POLL_COUNT * POLL_INTERVAL / 1000)}秒`;
                                 startPolling();
-                                showToast('支付链接已更新，请点击"立即支付"按钮');
+                                showToast('支付二维码已更新，请重新扫码支付');
                             } catch (error) {
                                 console.error('Recreate order error:', error);
                                 pollCounter.textContent = '重新获取失败，请点击下方按钮重试';
@@ -1207,7 +1250,6 @@
                         }
                     } catch (error) {
                         console.error('Polling error:', error);
-                        // 网络错误不中断轮询，继续尝试
                     }
                 }, POLL_INTERVAL);
             }
@@ -1231,11 +1273,14 @@
                     currentPayUrl = order.payUrl;
                     orderNoEl.textContent = currentOrderNo;
                     
+                    const qrUrl = order.qrCodeUrl || order.payUrl;
+                    renderQRCode(qrUrl, 'wechat');
+                    
                     pollCount = 0;
                     checkPaymentBtn.textContent = '已支付，点击验证';
                     checkPaymentBtn.disabled = false;
                     startPolling();
-                    showToast('支付链接已更新，请点击"立即支付"按钮');
+                    showToast('支付二维码已更新，请重新扫码支付');
                     
                 } catch (error) {
                     console.error('Recreate order error:', error);

@@ -33,40 +33,7 @@ function getClientIP() {
     });
 }
 
-async function createOrder(amount, level, mbtiType) {
-    const userId = generateUserId();
-    const ip = await getClientIP();
-    
-    const orderNo = 'PING' + Date.now() + Math.random().toString(36).substr(2, 8).toUpperCase();
-    
-    return {
-        success: true,
-        orderNo,
-        amount,
-        qrCodeUrl: `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(orderNo)}`,
-        expiresAt: new Date(Date.now() + 30 * 60 * 1000).toISOString()
-    };
-}
 
-async function checkOrder(orderNo) {
-    const random = Math.random();
-    if (random > 0.7) {
-        return {
-            success: true,
-            orderNo,
-            status: 'paid',
-            amount: 9.9,
-            level: localStorage.getItem('userLevel') || 'mid',
-            mbtiType: localStorage.getItem('mbtiType') || 'ESTP'
-        };
-    }
-    return {
-        success: true,
-        orderNo,
-        status: 'pending',
-        amount: 9.9
-    };
-}
 
 function showToast(msg) {
     const toast = document.getElementById('toast');
@@ -178,8 +145,6 @@ window.PING = {
     STORAGE_KEYS,
     generateUserId,
     getClientIP,
-    createOrder,
-    checkOrder,
     showToast,
     shuffleArray,
     checkAnswerConsistency,

@@ -3,7 +3,7 @@ const crypto = require('crypto');
 // 环境变量
 const APPID = process.env.HUPIJIAO_APPID;
 const APPSECRET = process.env.HUPIJIAO_APP_SECRET;
-const QUERY_URL = "https://api.xunhupay.com/payment/query.html";
+const QUERY_URL = "https://api.dpweixin.com/payment/query.html";
 
 function generateXhHash(params, hashkey) {
     const cleanParams = { ...params };

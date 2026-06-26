@@ -122,16 +122,16 @@ exports.handler = async function(event, context) {
             if (parts.length >= 6) {
                 const mbtiPart = parts[3] || 'XXXX';
                 const levelPart = parts[4] || 'MID';
-                const userIdPart = parts[5] || '';
+                const userIdFull = parts.slice(5).join('_');
                 
                 const levelMap = { 'LOW': 'low', 'MID': 'mid', 'HIGH': 'high' };
                 const levelFull = levelMap[levelPart] || 'mid';
-                const userPaymentKey = `paid_${userIdPart}_${mbtiPart}_${levelFull}`;
+                const userPaymentKey = `paid_${userIdFull}_${mbtiPart}_${levelFull}`;
                 
                 await store.set(userPaymentKey, JSON.stringify({
                     paid: true,
                     order_no: trade_order_id,
-                    user_id: userIdPart,
+                    user_id: userIdFull,
                     mbti_type: mbtiPart,
                     user_level: levelFull,
                     paid_at: new Date().toISOString()
