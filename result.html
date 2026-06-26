@@ -563,32 +563,22 @@
 
     <div class="modal-overlay" id="paymentModal">
         <div class="modal-content">
-            <div class="modal-title">支付 ¥9.9</div>
-            
-            <div class="payment-method-section" id="paymentMethodSection">
-                <p style="text-align:center;color:#666;margin-bottom:20px;">选择一种支付方式完成付款</p>
-                <button class="pay-btn wechat" id="wechatPayBtn" style="width:100%;padding:14px;background:#07c160;color:white;border:none;border-radius:8px;font-size:16px;font-weight:bold;margin-bottom:12px;">微信支付</button>
-                <button class="pay-btn alipay" id="alipayBtn" style="width:100%;padding:14px;background:#1677ff;color:white;border:none;border-radius:8px;font-size:16px;font-weight:bold;">支付宝支付</button>
+            <div class="modal-title">扫码支付</div>
+            <div class="qr-code-container" style="text-align:center;margin-bottom:20px;">
+                <img id="qrCode" class="qr-code" style="width:200px;height:200px;border:2px solid #f0f0f0;border-radius:12px;" src="" alt="支付二维码">
+                <button class="save-qr-btn" id="saveQrBtn" style="display:none;width:100%;padding:12px;margin-top:12px;background:#f5f5f5;border:1px solid #ddd;border-radius:8px;color:#666;font-size:14px;cursor:pointer;">保存二维码到相册</button>
             </div>
-
-            <div class="qr-section" id="qrSection" style="display:none;">
-                <div class="qr-hint" id="qrHint" style="text-align:center;color:#666;font-size:14px;margin-bottom:16px;"></div>
-                <div id="qrCode" style="display:flex;justify-content:center;margin-bottom:16px;"></div>
-                <button class="modal-btn secondary" id="saveQrBtn" style="background:#f5f5f5;color:#666;margin-top:0;">保存二维码到相册</button>
-                <button class="modal-btn secondary" id="retryPayBtn" style="background:#f5f5f5;color:#666;margin-top:8px;">更换支付方式</button>
-            </div>
-
             <div class="order-info">
                 <div class="order-row">
                     <span class="order-label">订单号</span>
-                    <span class="order-value order-no" id="orderNo">---</span>
+                    <span class="order-value" id="orderNo">---</span>
                 </div>
                 <div class="order-row">
                     <span class="order-label">支付金额</span>
                     <span class="order-value amount-value">¥9.9</span>
                 </div>
             </div>
-            <div class="poll-counter" id="pollCounter"></div>
+            <div class="modal-hint" id="paymentHint" style="font-size:13px;color:#999;text-align:center;margin-bottom:20px;line-height:1.6;">请使用微信或支付宝扫码支付<br/>支付成功后将自动解锁报告</div>
             <button class="modal-btn" id="checkPaymentBtn">已支付，点击验证</button>
             <button class="modal-btn cancel" id="cancelPaymentBtn">取消支付</button>
         </div>
@@ -978,6 +968,9 @@
                 document.getElementById('reportSection').classList.remove('show');
             }
 
+            // 移除QRCode库引用（不再需要生成二维码）
+            // 直接使用虎皮椒返回的二维码图片
+
             const unlockBtn = document.getElementById('unlockBtn');
             const restartBtn = document.getElementById('restartBtn');
             const paymentModal = document.getElementById('paymentModal');
@@ -987,13 +980,11 @@
             const checkPaymentBtn = document.getElementById('checkPaymentBtn');
             const cancelPaymentBtn = document.getElementById('cancelPaymentBtn');
             const saveQrBtn = document.getElementById('saveQrBtn');
-            const qrHint = document.getElementById('qrHint');
-            const pollCounter = document.getElementById('pollCounter');
+            const paymentHint = document.getElementById('paymentHint');
 
             let currentOrderNo = '';
             let currentOpenOrderId = '';
             let pollInterval = null;
-            let pollCount = 0;
             let currentPayUrl = '';
 
             function stopPolling() {
@@ -1001,7 +992,6 @@
                     clearInterval(pollInterval);
                     pollInterval = null;
                 }
-                pollCount = 0;
             }
 
             function unlockReport() {
@@ -1012,27 +1002,16 @@
                 showToast('支付成功！报告已解锁');
             }
 
-            // 保存二维码到相册（适配 iOS / 安卓 / PC，处理 canvas 生成的二维码）
-            async function saveQrCode() {
-                const qrCodeContainer = document.getElementById('qrCode');
-                if (!qrCodeContainer) {
-                    showToast('二维码容器未找到');
+            // 保存二维码到相册（iOS需要长按保存）
+            function saveQrCode() {
+                const img = document.getElementById('qrCode');
+                if (!img || !img.src) {
+                    showToast('二维码未加载');
                     return;
                 }
                 
-                // 查找 canvas 元素（二维码是通过 canvas 生成的）
-                const canvas = qrCodeContainer.querySelector('canvas');
-                if (!canvas) {
-                    showToast('二维码尚未生成，请稍后再试');
-                    return;
-                }
-
-                // 将 canvas 转为图片 URL
-                const qrDataUrl = canvas.toDataURL('image/png');
-
-                // 统一提示语：iOS 走"长按保存"路径，安卓/PC 走"自动下载"
+                // iOS：打开新窗口让用户长按保存
                 if (isMobile() && /iphone|ipad|ipod/i.test(navigator.userAgent.toLowerCase())) {
-                    // iOS：打开新窗口显示图片，让用户长按保存
                     const newWindow = window.open('', '_blank');
                     if (newWindow) {
                         newWindow.document.write(`
@@ -1043,206 +1022,85 @@
                             img{max-width:100%;height:auto;border-radius:12px;box-shadow:0 4px 16px rgba(0,0,0,0.1);}
                             p{margin-top:16px;color:#666;font-size:14px;line-height:1.6;}</style>
                             </head><body>
-                            <img src="${qrDataUrl}" alt="支付二维码">
+                            <img src="${img.src}" alt="支付二维码">
                             <p>长按图片 → 选择"存储图像"</p>
                             </body></html>
                         `);
                         newWindow.document.close();
-                        showToast('请在新窗口长按图片保存到相册');
-                    } else {
-                        showToast('请长按弹窗中的二维码图片保存');
+                        showToast('请在新窗口长按图片保存');
                     }
                     return;
                 }
-
-                try {
-                    // 尝试通过 blob 下载（PC / 大部分安卓浏览器可用）
-                    const link = document.createElement('a');
-                    link.href = qrDataUrl;
-                    link.download = `MBTI_pay_qr_${currentOrderNo || Date.now()}.png`;
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                    showToast('二维码已下载，请打开微信扫一扫 → 相册 → 选该图片');
-                } catch (error) {
-                    // 兜底为新窗口展示
-                    console.warn('Download QR failed, fallback to new tab:', error);
-                    const newWindow = window.open('', '_blank');
-                    if (newWindow) {
-                        newWindow.document.write(`
-                            <!DOCTYPE html><html><head><meta charset="UTF-8">
-                            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                            <title>支付二维码</title>
-                            <style>body{margin:0;padding:24px;background:#fff;text-align:center;font-family:"PingFang SC","Microsoft YaHei",sans-serif;}
-                            img{max-width:100%;height:auto;border-radius:12px;box-shadow:0 4px 16px rgba(0,0,0,0.1);}
-                            p{margin-top:16px;color:#666;font-size:14px;line-height:1.6;}</style>
-                            </head><body>
-                            <img src="${qrDataUrl}" alt="支付二维码">
-                            <p>安卓/iPad 用户：长按图片 → 保存到相册<br>电脑端：右键图片 → 图片另存为</p>
-                            </body></html>
-                        `);
-                        newWindow.document.close();
-                        showToast('请在新窗口中保存二维码');
-                    } else {
-                        showToast('保存失败，请手动截屏保存二维码');
-                    }
-                }
-            }
-
-            const paymentMethodSection = document.getElementById('paymentMethodSection');
-            const qrSection = document.getElementById('qrSection');
-            const retryPayBtn = document.getElementById('retryPayBtn');
-
-            function showPaymentMethod() {
-                paymentMethodSection.style.display = 'block';
-                qrSection.style.display = 'none';
-                qrCode.innerHTML = '';
-            }
-
-            function showQRCode() {
-                paymentMethodSection.style.display = 'none';
-                qrSection.style.display = 'block';
-            }
-
-            function renderQRCode(url, payType) {
-                qrCode.innerHTML = '';
-                if (typeof QRCode !== 'undefined') {
-                    new QRCode(qrCode, {
-                        text: url,
-                        width: 240,
-                        height: 240,
-                        colorDark: '#000000',
-                        colorLight: '#ffffff',
-                        correctLevel: QRCode.CorrectLevel.H
-                    });
-                }
                 
-                const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent.toLowerCase());
-                const isMobile = isMobileDevice();
-                
-                let hintText = '';
-                if (payType === 'wechat') {
-                    if (isIOS) {
-                        hintText = '📱 iOS用户：长按上方二维码 → 选择"识别图中二维码" → 跳转微信支付';
-                    } else if (isMobile) {
-                        hintText = '📱 安卓用户：保存二维码后打开微信 → 扫一扫 → 相册 → 选择该图片';
-                    } else {
-                        hintText = '🖥️ 电脑端：使用微信扫一扫扫描上方二维码';
-                    }
-                } else {
-                    if (isIOS) {
-                        hintText = '📱 iOS用户：长按上方二维码 → 选择"识别图中二维码" → 跳转支付宝支付';
-                    } else if (isMobile) {
-                        hintText = '📱 安卓用户：保存二维码后打开支付宝 → 扫一扫 → 相册 → 选择该图片';
-                    } else {
-                        hintText = '🖥️ 电脑端：使用支付宝扫一扫扫描上方二维码';
-                    }
-                }
-                qrHint.textContent = hintText;
+                // 安卓/PC：下载图片
+                const link = document.createElement('a');
+                link.href = img.src;
+                link.download = `MBTI_pay_qr_${currentOrderNo || Date.now()}.png`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                showToast('二维码已下载');
             }
+            
+            saveQrBtn.addEventListener('click', saveQrCode);
 
-            async function handlePayMethod(payType) {
+            // 点击解锁按钮 - 直接创建订单并显示二维码
+            unlockBtn.addEventListener('click', async () => {
                 try {
-                    const order = await createOrder(payType);
+                    const order = await createOrder('wechat');
                     if (!order || !order.success) {
-                        showToast(order?.message || '创建订单失败');
+                        showToast(order?.message || '创建订单失败，请重试');
                         return;
                     }
                     
                     currentOrderNo = order.orderNo;
                     currentOpenOrderId = order.openOrderId || '';
-                    currentPayUrl = order.payUrl;
+                    currentPayUrl = order.mobileUrl || order.qrCodeUrl;
                     orderNoEl.textContent = currentOrderNo;
                     
-                    const qrUrl = order.qrCodeUrl || order.payUrl;
-                    renderQRCode(qrUrl, payType);
-                    showQRCode();
+                    // 关键：区分电脑端和手机端
+                    if (order.isMobile) {
+                        // 手机端：显示二维码图片(url_qrcode)，同时提供跳转按钮(url参数)
+                        qrCode.style.display = 'block';
+                        qrCode.src = order.qrCodeUrl;  // 使用url_qrcode显示二维码图片
+                        saveQrBtn.style.display = 'block';
+                        paymentHint.textContent = '长按二维码识别支付，或点击下方按钮跳转支付';
+                        
+                        // 添加跳转到支付页面的按钮（使用url参数）
+                        const existingBtn = document.querySelector('.mobile-pay-btn');
+                        if (existingBtn) existingBtn.remove();
+                        const linkBtn = document.createElement('a');
+                        linkBtn.href = order.mobileUrl;  // 使用url参数跳转
+                        linkBtn.target = '_blank';
+                        linkBtn.className = 'mobile-pay-btn';
+                        linkBtn.textContent = '跳转支付页面';
+                        linkBtn.style.cssText = 'display:block;width:100%;height:50px;line-height:50px;background:#c41e3a;color:#fff;border-radius:12px;font-weight:bold;font-size:16px;text-decoration:none;text-align:center;margin-top:12px;';
+                        qrCode.parentNode.appendChild(linkBtn);
+                    } else {
+                        // 电脑端：只显示二维码图片(url_qrcode)，让用户扫码
+                        qrCode.style.display = 'block';
+                        qrCode.src = order.qrCodeUrl;  // 使用url_qrcode显示二维码图片
+                        saveQrBtn.style.display = 'none';
+                        paymentHint.textContent = '请使用微信或支付宝扫码支付\n支付成功后将自动解锁报告';
+                        
+                        // 移除可能存在的跳转按钮
+                        const existingBtn = document.querySelector('.mobile-pay-btn');
+                        if (existingBtn) existingBtn.remove();
+                    }
                     
-                    pollCount = 0;
+                    paymentModal.classList.add('show');
                     startPolling();
                     
                 } catch (error) {
                     console.error('Payment error:', error);
                     showToast('支付操作失败，请重试');
                 }
-            }
-
-            // 微信支付按钮
-            const wechatPayBtn = document.getElementById('wechatPayBtn');
-            wechatPayBtn.addEventListener('click', () => {
-                handlePayMethod('wechat');
-            });
-            
-            // 支付宝支付按钮
-            const alipayBtn = document.getElementById('alipayBtn');
-            alipayBtn.addEventListener('click', () => {
-                handlePayMethod('alipay');
-            });
-
-            // 更换支付方式按钮
-            retryPayBtn.addEventListener('click', () => {
-                showPaymentMethod();
-            });
-
-            // 点击解锁按钮
-            unlockBtn.addEventListener('click', () => {
-                paymentModal.classList.add('show');
-                showPaymentMethod();
-                currentOrderNo = '';
-                currentOpenOrderId = '';
-                orderNoEl.textContent = '---';
-                stopPolling();
             });
 
             // 开始轮询
             function startPolling() {
                 stopPolling();
                 pollInterval = setInterval(async () => {
-                    pollCount++;
-                    
-                    const remainingSeconds = Math.round((MAX_POLL_COUNT - pollCount) * POLL_INTERVAL / 1000);
-                    pollCounter.textContent = `自动验证中 (${pollCount}/${MAX_POLL_COUNT})，剩余约${remainingSeconds}秒`;
-                    
-                    if (pollCount > MAX_POLL_COUNT) {
-                        stopPolling();
-                        pollCounter.textContent = '支付超时，正在重新获取支付码...';
-                        checkPaymentBtn.disabled = true;
-                        checkPaymentBtn.textContent = '重新获取中...';
-                        
-                        setTimeout(async () => {
-                            try {
-                                const order = await createOrder();
-                                if (!order || !order.success) {
-                                    pollCounter.textContent = '重新获取失败，请点击下方按钮重试';
-                                    checkPaymentBtn.textContent = '重新获取支付码';
-                                    checkPaymentBtn.disabled = false;
-                                    return;
-                                }
-                                
-                                currentOrderNo = order.orderNo;
-                                currentOpenOrderId = order.openOrderId || '';
-                                currentPayUrl = order.payUrl;
-                                orderNoEl.textContent = currentOrderNo;
-                                
-                                const qrUrl = order.qrCodeUrl || order.payUrl;
-                                renderQRCode(qrUrl, 'wechat');
-                                
-                                pollCount = 0;
-                                checkPaymentBtn.textContent = '已支付，点击验证';
-                                checkPaymentBtn.disabled = false;
-                                pollCounter.textContent = `自动验证中 (${pollCount}/${MAX_POLL_COUNT})，剩余约${Math.round(MAX_POLL_COUNT * POLL_INTERVAL / 1000)}秒`;
-                                startPolling();
-                                showToast('支付二维码已更新，请重新扫码支付');
-                            } catch (error) {
-                                console.error('Recreate order error:', error);
-                                pollCounter.textContent = '重新获取失败，请点击下方按钮重试';
-                                checkPaymentBtn.textContent = '重新获取支付码';
-                                checkPaymentBtn.disabled = false;
-                            }
-                        }, 1500);
-                        return;
-                    }
-                    
                     try {
                         const isPaid = await checkPaymentStatus(currentOrderNo, currentOpenOrderId);
                         if (isPaid) {
@@ -1251,53 +1109,11 @@
                     } catch (error) {
                         console.error('Polling error:', error);
                     }
-                }, POLL_INTERVAL);
-            }
-
-            // 重新创建订单
-            async function recreateOrder() {
-                try {
-                    checkPaymentBtn.disabled = true;
-                    checkPaymentBtn.textContent = '创建中...';
-                    
-                    const order = await createOrder();
-                    if (!order || !order.success) {
-                        showToast(order?.message || '重新创建订单失败，请检查网络后重试');
-                        checkPaymentBtn.textContent = '重新获取支付码';
-                        checkPaymentBtn.disabled = false;
-                        return;
-                    }
-                    
-                    currentOrderNo = order.orderNo;
-                    currentOpenOrderId = order.openOrderId || '';
-                    currentPayUrl = order.payUrl;
-                    orderNoEl.textContent = currentOrderNo;
-                    
-                    const qrUrl = order.qrCodeUrl || order.payUrl;
-                    renderQRCode(qrUrl, 'wechat');
-                    
-                    pollCount = 0;
-                    checkPaymentBtn.textContent = '已支付，点击验证';
-                    checkPaymentBtn.disabled = false;
-                    startPolling();
-                    showToast('支付二维码已更新，请重新扫码支付');
-                    
-                } catch (error) {
-                    console.error('Recreate order error:', error);
-                    showToast('重新创建订单失败，请稍后重试');
-                    checkPaymentBtn.textContent = '重新获取支付码';
-                    checkPaymentBtn.disabled = false;
-                }
+                }, 5000);
             }
 
             // 手动验证按钮
             checkPaymentBtn.addEventListener('click', async () => {
-                // 如果已超时，重新创建订单
-                if (pollCount > MAX_POLL_COUNT) {
-                    recreateOrder();
-                    return;
-                }
-                
                 paymentModal.classList.remove('show');
                 checkingModal.classList.add('show');
 
