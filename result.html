@@ -971,7 +971,7 @@
         async function checkPaymentStatus(orderNo, openOrderId = '') {
             try {
                 const userId = localStorage.getItem('userId');
-                debug('调用 check-order API 参数:', { orderNo, openOrderId, userId });
+                console.log('调用 check-order API 参数:', { orderNo, openOrderId, userId });
                 
                 const response = await fetch('/.netlify/functions/check-order', {
                     method: 'POST',
@@ -986,12 +986,12 @@
                 });
                 
                 const data = await response.json();
-                debug('check-order API响应:', JSON.stringify(data));
+                console.log('check-order API响应:', JSON.stringify(data));
                 
                 return data.paid === true || data.status === 'paid';
             } catch (error) {
                 console.error('Check payment error:', error);
-                debug('check-order API错误:', error.message);
+                console.log('check-order API错误:', error.message);
                 return false;
             }
         }
@@ -1093,11 +1093,10 @@
                 try {
                     const userId = localStorage.getItem('userId');
                     if (!userId) {
-                        debug('没有userId');
+                        console.log('没有userId');
                         return false;
                     }
-                    debug('userId: ' + userId);
-                    debug('调用 checkOrder API...');
+                    console.log('userId:', userId);
                     
                     const response = await fetch('/.netlify/functions/check-order', {
                         method: 'POST',
@@ -1112,23 +1111,19 @@
                         })
                     });
                     const data = await response.json();
-                    debug('API响应: ' + JSON.stringify(data));
+                    console.log('checkServerPaidStatus response:', data);
                     
                     if (data.paid === true || data.status === 'paid') {
                         document.getElementById('unlockSection').style.display = 'none';
                         document.getElementById('reportSection').classList.add('show');
                         renderReport(userLevel);
-                        debug('报告已解锁（通过用户记录）');
-                        debugDiv.style.display = 'none';
                         return true;
                     } else {
                         document.getElementById('unlockSection').style.display = 'block';
                         document.getElementById('reportSection').classList.remove('show');
-                        debug('未支付');
                         return false;
                     }
                 } catch (error) {
-                    debug('错误: ' + error.message);
                     console.error('Check server paid status error:', error);
                     return false;
                 }
