@@ -3,7 +3,8 @@ const crypto = require('crypto');
 // 环境变量
 const APPID = process.env.HUPIJIAO_APPID;
 const APPSECRET = process.env.HUPIJIAO_APP_SECRET;
-const QUERY_URL = "https://api.dpweixin.com/payment/do.html";
+// 查询API应该用专门的查询接口
+const QUERY_URL = "https://api.dpweixin.com/payment/query.html";
 
 function generateXhHash(params, hashkey) {
     const cleanParams = { ...params };
@@ -56,27 +57,29 @@ exports.handler = async function(event, context) {
 
     const { order_no, open_order_id, mbtiType, userLevel, userId, onlyUserRecord } = body;
     
+    console.log('=== 检查订单 ===');
+    console.log('order_no:', order_no);
+    console.log('open_order_id:', open_order_id);
+    console.log('onlyUserRecord:', onlyUserRecord);
+    console.log('userId:', userId);
+    
     if (!order_no && !onlyUserRecord) {
         return { statusCode: 400, headers, body: JSON.stringify({ code: -1, msg: "Missing order_no" }) };
     }
-    // onlyUserRecord 模式必须提供 userId + mbtiType + userLevel
-    if (onlyUserRecord && (!userId || !mbtiType || !userLevel)) {
-        return { statusCode: 400, headers, body: JSON.stringify({ code: -1, msg: "Missing userId/mbtiType/userLevel" }) };
-    }
 
-    console.log('Checking order:', order_no || '(onlyUserRecord)');
-    
-    // 首先从 Netlify Blobs 查询本地支付状态
-    try {
-        const store = await import('@netlify/blobs').then(m => m.getStore('payments'));
-        
-        // 1) 如果给了具体订单号，先查订单记录
-        if (order_no) {
-            const orderData = await store.get(order_no);
-            if (orderData) {
-                const payment = JSON.parse(orderData);
-                if (payment.status === 'paid') {
-                    console.log('Order found in Blobs as paid');
+    // 1. onlyUserRecord模式：只查用户记录
+    if (onlyUserRecord) {
+        if (!userId || !mbtiType || !userLevel) {
+            return { statusCode: 400, headers, body: JSON.stringify({ code: -1, msg: "Missing userId/mbtiType/userLevel" }) };
+        }
+        try {
+            const store = await import('@netlify/blobs').then(m => m.getStore('payments'));
+            const userPaymentKey = `paid_${userId}_${mbtiType}_${userLevel}`;
+            const userPaymentData = await store.get(userPaymentKey);
+            if (userPaymentData) {
+                const userPayment = JSON.parse(userPaymentData);
+                if (userPayment.paid === true) {
+                    console.log('用户记录找到:', userPaymentKey);
                     return { 
                         statusCode: 200, 
                         headers, 
@@ -84,46 +87,12 @@ exports.handler = async function(event, context) {
                             code: 0, 
                             paid: true, 
                             status: 'paid',
-                            order_no: order_no,
-                            msg: "Payment confirmed" 
+                            msg: "Payment confirmed by user record" 
                         }) 
                     };
                 }
             }
-        }
-        
-        // 2) 如果提供了 userId、mbtiType 和 userLevel，查询用户支付记录
-        // key 使用完整 level 字符串（low/mid/high），与 notify.js 一致
-        if (userId && mbtiType && userLevel) {
-            // level 安全白名单：避免恶意传入任意 key 探测 Blobs
-            const safeLevels = ['low', 'mid', 'high'];
-            if (!safeLevels.includes(userLevel)) {
-                console.warn('Invalid userLevel:', userLevel);
-            } else {
-                const userPaymentKey = `paid_${userId}_${mbtiType}_${userLevel}`;
-                const userPaymentData = await store.get(userPaymentKey);
-                if (userPaymentData) {
-                    const userPayment = JSON.parse(userPaymentData);
-                    if (userPayment.paid === true) {
-                        console.log('User payment found in Blobs:', userPaymentKey);
-                        return { 
-                            statusCode: 200, 
-                            headers, 
-                            body: JSON.stringify({ 
-                                code: 0, 
-                                paid: true, 
-                                status: 'paid',
-                                order_no: userPayment.order_no || order_no || '',
-                                msg: "Payment confirmed by user record" 
-                            }) 
-                        };
-                    }
-                }
-            }
-        }
-        
-        // 3) onlyUserRecord 模式：到这里说明 Blobs 中没有该用户记录，未支付
-        if (onlyUserRecord) {
+            console.log('用户记录未找到:', userPaymentKey);
             return { 
                 statusCode: 200, 
                 headers, 
@@ -134,14 +103,22 @@ exports.handler = async function(event, context) {
                     msg: "No user payment record" 
                 }) 
             };
+        } catch (e) {
+            console.log('Blobs用户记录错误:', e.message);
+            return { 
+                statusCode: 200, 
+                headers, 
+                body: JSON.stringify({ 
+                    code: 0, 
+                    paid: false, 
+                    status: 'unknown',
+                    msg: "Blobs error" 
+                }) 
+            };
         }
-        
-    } catch (blobError) {
-        console.log('Blobs read error:', blobError.message);
-        // 继续尝试从虎皮椒API查询
     }
-    
-    // 本地未找到且需要查具体订单时，查询虎皮椒API
+
+    // 2. 如果没有order_no，直接返回未支付
     if (!order_no) {
         return { 
             statusCode: 200, 
@@ -150,12 +127,13 @@ exports.handler = async function(event, context) {
                 code: 0, 
                 paid: false, 
                 status: 'unknown',
-                msg: "No order_no provided and no local record" 
+                msg: "No order_no" 
             }) 
         };
     }
-    
-    // 本地未找到，查询虎皮椒API
+
+    // 3. 优先查询虎皮椒API（最可靠！）
+    console.log('优先查询虎皮椒API...');
     try {
         const time = Math.floor(Date.now() / 1000).toString();
         const nonce_str = crypto.randomBytes(16).toString('hex');
@@ -179,43 +157,150 @@ exports.handler = async function(event, context) {
             return `${key}=${encodeURIComponent(params[key])}`;
         }).join('&');
 
-        console.log('Querying payment API...');
-
-        // 用 AbortController 实现真超时
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 15000);
+        console.log('POST data:', postData);
 
         const response = await fetch(QUERY_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
             body: postData,
-            signal: controller.signal
+            timeout: 15000
         });
-        clearTimeout(timeoutId);
 
         const text = await response.text();
+        console.log('API响应:', text.substring(0, 800));
 
+        let result;
         try {
-            const result = JSON.parse(text);
-
-            if (!result.errcode || result.errcode === 0 || result.errcode === '0') {
-                const status = result.data?.status || result.status;
-                if (status === 'OD' || status === 'PAID' || status === 'TRADE_SUCCESS') {
-                    // 支付成功，保存到 Blobs
-                    try {
-                        const store = await import('@netlify/blobs').then(m => m.getStore('payments'));
-                        const paymentData = {
+            result = JSON.parse(text);
+        } catch (e) {
+            console.log('JSON解析失败');
+            // 如果JSON解析失败，尝试从HTML中提取信息
+            if (text.includes('SUCCESS') || text.includes('success')) {
+                console.log('HTML响应中包含success');
+                // 保存到Blobs
+                try {
+                    const store = await import('@netlify/blobs').then(m => m.getStore('payments'));
+                    await store.set(order_no, JSON.stringify({
+                        order_no: order_no,
+                        status: 'paid',
+                        paid_at: new Date().toISOString()
+                    }));
+                    if (userId && mbtiType && userLevel) {
+                        const userPaymentKey = `paid_${userId}_${mbtiType}_${userLevel}`;
+                        await store.set(userPaymentKey, JSON.stringify({
+                            paid: true,
                             order_no: order_no,
-                            status: 'paid',
-                            amount: result.data?.total_fee || 9.9,
+                            user_id: userId,
+                            mbti_type: mbtiType,
+                            user_level: userLevel,
                             paid_at: new Date().toISOString()
-                        };
-                        await store.set(order_no, JSON.stringify(paymentData));
-                        console.log('Payment saved to Blobs from API query');
-                    } catch (e) {
-                        console.log('Failed to save to Blobs:', e.message);
+                        }));
                     }
+                } catch (e) {}
+                return { 
+                    statusCode: 200, 
+                    headers, 
+                    body: JSON.stringify({ 
+                        code: 0, 
+                        paid: true, 
+                        status: 'paid',
+                        msg: "Payment confirmed by API HTML" 
+                    }) 
+                };
+            }
+            return { 
+                statusCode: 200, 
+                headers, 
+                body: JSON.stringify({ 
+                    code: -2, 
+                    paid: false, 
+                    msg: 'Invalid API response: ' + text.substring(0, 100)
+                }) 
+            };
+        }
+
+        if (!result.errcode || result.errcode === 0 || result.errcode === '0') {
+            const status = result.data?.status || result.status || result.trade_status;
+            console.log('订单状态:', status);
+            
+            // 虎皮椒支付成功状态：OD, PAID, TRADE_SUCCESS, 1, paid, success
+            const successStatuses = ['OD', 'PAID', 'TRADE_SUCCESS', '1', 'paid', 'success', 'SUCCESS'];
+            const isSuccess = successStatuses.includes(String(status).toUpperCase());
+            
+            if (isSuccess) {
+                // 保存到Blobs
+                try {
+                    const store = await import('@netlify/blobs').then(m => m.getStore('payments'));
+                    await store.set(order_no, JSON.stringify({
+                        order_no: order_no,
+                        status: 'paid',
+                        paid_at: new Date().toISOString()
+                    }));
+                    console.log('Payment saved to Blobs from API');
                     
+                    // 同时保存用户记录
+                    if (userId && mbtiType && userLevel) {
+                        const userPaymentKey = `paid_${userId}_${mbtiType}_${userLevel}`;
+                        await store.set(userPaymentKey, JSON.stringify({
+                            paid: true,
+                            order_no: order_no,
+                            user_id: userId,
+                            mbti_type: mbtiType,
+                            user_level: userLevel,
+                            paid_at: new Date().toISOString()
+                        }));
+                        console.log('User payment record saved:', userPaymentKey);
+                    }
+                } catch (e) {
+                    console.log('Blobs save error:', e.message);
+                }
+                
+                return { 
+                    statusCode: 200, 
+                    headers, 
+                    body: JSON.stringify({ 
+                        code: 0, 
+                        paid: true, 
+                        status: 'paid',
+                        msg: "Payment confirmed by API" 
+                    }) 
+                };
+            } else {
+                return { 
+                    statusCode: 200, 
+                    headers, 
+                    body: JSON.stringify({ 
+                        code: 0, 
+                        paid: false, 
+                        status: status || 'pending',
+                        msg: "Order " + (status || 'pending') 
+                    }) 
+                };
+            }
+        } else {
+            console.log('API错误:', result.errmsg);
+            return { 
+                statusCode: 200, 
+                headers, 
+                body: JSON.stringify({ 
+                    code: result.errcode, 
+                    paid: false, 
+                    msg: result.errmsg || 'Query error' 
+                }) 
+            };
+        }
+    } catch (error) {
+        console.error('查询API错误:', error.message);
+        
+        // API查询失败，回退到本地Blobs
+        console.log('API查询失败，回退到本地Blobs...');
+        try {
+            const store = await import('@netlify/blobs').then(m => m.getStore('payments'));
+            const orderData = await store.get(order_no);
+            if (orderData) {
+                const payment = JSON.parse(orderData);
+                console.log('本地Blobs找到:', payment.status);
+                if (payment.status === 'paid') {
                     return { 
                         statusCode: 200, 
                         headers, 
@@ -223,57 +308,22 @@ exports.handler = async function(event, context) {
                             code: 0, 
                             paid: true, 
                             status: 'paid',
-                            order_no: order_no,
-                            msg: "Payment confirmed by API" 
-                        }) 
-                    };
-                } else {
-                    return { 
-                        statusCode: 200, 
-                        headers, 
-                        body: JSON.stringify({ 
-                            code: 0, 
-                            paid: false, 
-                            status: status || 'pending',
-                            order_no: order_no,
-                            msg: "Order pending" 
+                            msg: "Payment confirmed by Blobs" 
                         }) 
                     };
                 }
-            } else {
-                return { 
-                    statusCode: 200, 
-                    headers, 
-                    body: JSON.stringify({ 
-                        code: result.errcode, 
-                        paid: false, 
-                        order_no: order_no,
-                        msg: result.errmsg || 'Query error' 
-                    }) 
-                };
             }
+            console.log('本地Blobs未找到');
         } catch (e) {
-            console.log('JSON parse error:', e.message);
-            return { 
-                statusCode: 200, 
-                headers, 
-                body: JSON.stringify({ 
-                    code: -2, 
-                    paid: false, 
-                    order_no: order_no,
-                    msg: 'Invalid API response' 
-                }) 
-            };
+            console.log('Blobs错误:', e.message);
         }
-    } catch (error) {
-        console.error('Query error:', error.message);
+        
         return { 
             statusCode: 500, 
             headers, 
             body: JSON.stringify({ 
                 code: -3, 
                 paid: false, 
-                order_no: order_no,
                 msg: error.message 
             }) 
         };

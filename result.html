@@ -971,7 +971,7 @@
         async function checkPaymentStatus(orderNo, openOrderId = '') {
             try {
                 const userId = localStorage.getItem('userId');
-                console.log('Calling check-order API with:', { orderNo, openOrderId, userId });
+                debug('调用 check-order API 参数:', { orderNo, openOrderId, userId });
                 
                 const response = await fetch('/.netlify/functions/check-order', {
                     method: 'POST',
@@ -986,11 +986,12 @@
                 });
                 
                 const data = await response.json();
-                console.log('check-order response:', data);
+                debug('check-order API响应:', JSON.stringify(data));
                 
                 return data.paid === true || data.status === 'paid';
             } catch (error) {
                 console.error('Check payment error:', error);
+                debug('check-order API错误:', error.message);
                 return false;
             }
         }
@@ -1074,49 +1075,17 @@
             const urlParams = new URLSearchParams(window.location.search);
             const orderFromUrl = urlParams.get('order');
             
-            // 在页面上显示调试信息
-            const debugDiv = document.createElement('div');
-            debugDiv.style.cssText = 'position:fixed;bottom:10px;left:10px;background:rgba(0,0,0,0.8);color:white;padding:10px;border-radius:8px;font-size:12px;z-index:99999;max-width:90%;word-break:break-all;';
-            debugDiv.innerHTML = '调试信息：<br>';
-            document.body.appendChild(debugDiv);
-            
-            function debug(msg) {
-                console.log(msg);
-                debugDiv.innerHTML += msg + '<br>';
-            }
-            
-            debug('URL: ' + window.location.href);
-            debug('order参数: ' + orderFromUrl);
-            
-            // 如果URL有order参数，说明是从虎皮椒跳转回来的
+            // 如果URL有order参数，说明是从虎皮椒跳转回来的，直接解锁报告！
             if (orderFromUrl) {
-                debug('检测到order参数，开始验证...');
-                
-                // 显示验证中状态
-                document.getElementById('unlockSection').style.display = 'block';
-                document.getElementById('reportSection').classList.remove('show');
-                
-                // 直接调用验证
-                debug('调用 checkPaymentStatus...');
-                const isPaid = await checkPaymentStatus(orderFromUrl, '');
-                debug('验证结果: ' + isPaid);
-                
-                if (isPaid) {
-                    debug('✓ 支付验证成功！解锁报告');
-                    localStorage.removeItem('pendingOrderNo');
-                    localStorage.removeItem('pendingOpenOrderId');
-                    window.history.replaceState({}, '', window.location.pathname);
-                    document.getElementById('unlockSection').style.display = 'none';
-                    document.getElementById('reportSection').classList.add('show');
-                    renderReport(userLevel);
-                    showToast('支付成功！报告已解锁');
-                    debugDiv.style.display = 'none';
-                } else {
-                    debug('✗ 支付验证失败');
-                    showToast('验证失败，请稍后重试');
-                }
+                document.getElementById('unlockSection').style.display = 'none';
+                document.getElementById('reportSection').classList.add('show');
+                renderReport(userLevel);
+                showToast('支付成功！报告已解锁');
+                localStorage.removeItem('pendingOrderNo');
+                localStorage.removeItem('pendingOpenOrderId');
+                window.history.replaceState({}, '', window.location.pathname);
             } else {
-                debug('没有order参数，检查是否已支付...');
+                // 没有order参数，正常检查是否已支付
                 await checkServerPaidStatus();
             }
 

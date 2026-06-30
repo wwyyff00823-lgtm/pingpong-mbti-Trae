@@ -150,6 +150,22 @@ exports.handler = async function(event, context) {
         console.log('====================');
 
         if (pcQrCodeUrl || mobileUrl) {
+            // 创建订单时预存到Blobs（待验证状态）
+            try {
+                const store = await import('@netlify/blobs').then(m => m.getStore('payments'));
+                await store.set(order_no, JSON.stringify({
+                    order_no: order_no,
+                    status: 'pending',
+                    userId: userId,
+                    mbtiType: mbtiPart,
+                    userLevel: levelPart,
+                    created_at: new Date().toISOString()
+                }));
+                console.log('Order pre-stored to Blobs:', order_no);
+            } catch (e) {
+                console.log('Failed to pre-store order:', e.message);
+            }
+            
             return { statusCode: 200, headers, body: JSON.stringify({ 
                 code: 0, 
                 url_qrcode: pcQrCodeUrl,
