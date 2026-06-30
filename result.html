@@ -971,6 +971,8 @@
         async function checkPaymentStatus(orderNo, openOrderId = '') {
             try {
                 const userId = localStorage.getItem('userId');
+                console.log('Calling check-order API with:', { orderNo, openOrderId, userId });
+                
                 const response = await fetch('/.netlify/functions/check-order', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -982,7 +984,10 @@
                         userId: userId
                     })
                 });
+                
                 const data = await response.json();
+                console.log('check-order response:', data);
+                
                 return data.paid === true || data.status === 'paid';
             } catch (error) {
                 console.error('Check payment error:', error);
@@ -1001,6 +1006,12 @@
         async function createOrder(payType = 'wechat') {
             try {
                 const userId = localStorage.getItem('userId');
+                console.log('=== 创建订单 ===');
+                console.log('payType:', payType);
+                console.log('userId:', userId);
+                console.log('isMobile:', isMobileDevice());
+                console.log('================');
+                
                 const response = await fetch('/.netlify/functions/create-order', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -1011,13 +1022,21 @@
                         payType: payType
                     })
                 });
+                
                 const data = await response.json();
+                console.log('=== 创建订单返回 ===');
+                console.log('code:', data.code);
+                console.log('msg:', data.msg);
+                console.log('order_no:', data.order_no);
+                console.log('url_qrcode:', data.url_qrcode ? data.url_qrcode.substring(0, 100) + '...' : 'empty');
+                console.log('url:', data.url ? data.url.substring(0, 100) + '...' : 'empty');
+                console.log('isMobile:', isMobileDevice());
+                console.log('====================');
+                
                 if (data.code === 0) {
                     const isMobile = isMobileDevice();
-                    const isWeChat = isWeChatBrowser();
                     const qrCodeUrl = data.url_qrcode || '';
                     const mobileUrl = data.url || '';
-                    const payUrl = isMobile ? mobileUrl : qrCodeUrl;
                     
                     return {
                         success: true,
@@ -1025,12 +1044,12 @@
                         openOrderId: data.open_order_id || '',
                         qrCodeUrl: qrCodeUrl,
                         mobileUrl: mobileUrl,
-                        payUrl: payUrl,
+                        payUrl: isMobile ? mobileUrl : qrCodeUrl,
                         isMobile: isMobile,
-                        isWeChat: isWeChat,
                         price: data.price || 9.9
                     };
                 } else {
+                    console.error('创建订单失败:', data.msg);
                     return { success: false, message: data.msg || '创建订单失败' };
                 }
             } catch (error) {
@@ -1051,26 +1070,39 @@
 
             renderPersonality();
 
-            // 从URL获取订单号（虎皮椒return_url会带参数）
+            // 直接从URL获取order参数
             const urlParams = new URLSearchParams(window.location.search);
             const orderFromUrl = urlParams.get('order');
-            const pendingOrderNo = orderFromUrl || localStorage.getItem('pendingOrderNo');
-            const pendingOpenOrderId = localStorage.getItem('pendingOpenOrderId');
             
-            console.log('URL:', window.location.href);
-            console.log('Order from URL:', orderFromUrl);
-            console.log('Pending order:', pendingOrderNo);
+            // 在页面上显示调试信息
+            const debugDiv = document.createElement('div');
+            debugDiv.style.cssText = 'position:fixed;bottom:10px;left:10px;background:rgba(0,0,0,0.8);color:white;padding:10px;border-radius:8px;font-size:12px;z-index:99999;max-width:90%;word-break:break-all;';
+            debugDiv.innerHTML = '调试信息：<br>';
+            document.body.appendChild(debugDiv);
             
-            if (pendingOrderNo) {
-                // 显示等待状态
+            function debug(msg) {
+                console.log(msg);
+                debugDiv.innerHTML += msg + '<br>';
+            }
+            
+            debug('URL: ' + window.location.href);
+            debug('order参数: ' + orderFromUrl);
+            
+            // 如果URL有order参数，说明是从虎皮椒跳转回来的
+            if (orderFromUrl) {
+                debug('检测到order参数，开始验证...');
+                
+                // 显示验证中状态
                 document.getElementById('unlockSection').style.display = 'block';
                 document.getElementById('reportSection').classList.remove('show');
                 
-                // 立即验证一次
-                const isPaidNow = await checkPaymentStatus(pendingOrderNo, pendingOpenOrderId || '');
+                // 直接调用验证
+                debug('调用 checkPaymentStatus...');
+                const isPaid = await checkPaymentStatus(orderFromUrl, '');
+                debug('验证结果: ' + isPaid);
                 
-                if (isPaidNow) {
-                    console.log('Payment verified immediately!');
+                if (isPaid) {
+                    debug('✓ 支付验证成功！解锁报告');
                     localStorage.removeItem('pendingOrderNo');
                     localStorage.removeItem('pendingOpenOrderId');
                     window.history.replaceState({}, '', window.location.pathname);
@@ -1078,55 +1110,58 @@
                     document.getElementById('reportSection').classList.add('show');
                     renderReport(userLevel);
                     showToast('支付成功！报告已解锁');
+                    debugDiv.style.display = 'none';
                 } else {
-                    // 启动轮询验证（最多120秒）
-                    showToast('正在验证支付状态，请稍候...');
-                    let retryCount = 0;
-                    const maxRetries = 24;
-                    
-                    const verifyPayment = async () => {
-                        retryCount++;
-                        console.log(`Verify ${retryCount}/${maxRetries}`);
-                        
-                        const isPaid = await checkPaymentStatus(pendingOrderNo, pendingOpenOrderId || '');
-                        if (isPaid) {
-                            console.log('Payment verified after retries!');
-                            localStorage.removeItem('pendingOrderNo');
-                            localStorage.removeItem('pendingOpenOrderId');
-                            window.history.replaceState({}, '', window.location.pathname);
-                            document.getElementById('unlockSection').style.display = 'none';
-                            document.getElementById('reportSection').classList.add('show');
-                            renderReport(userLevel);
-                            showToast('支付成功！报告已解锁');
-                            return;
-                        }
-                        
-                        if (retryCount < maxRetries) {
-                            setTimeout(verifyPayment, 5000);
-                        } else {
-                            console.log('Timeout, checking server status...');
-                            localStorage.removeItem('pendingOrderNo');
-                            localStorage.removeItem('pendingOpenOrderId');
-                            window.history.replaceState({}, '', window.location.pathname);
-                            await finalCheckServerStatus();
-                        }
-                    };
-                    
-                    setTimeout(verifyPayment, 2000);
+                    debug('✗ 支付验证失败');
+                    showToast('验证失败，请稍后重试');
                 }
             } else {
+                debug('没有order参数，检查是否已支付...');
                 await checkServerPaidStatus();
             }
 
-            async function finalCheckServerStatus() {
-                const paidFromServer = await checkServerPaidStatus();
-                if (paidFromServer) {
-                    document.getElementById('unlockSection').style.display = 'none';
-                    document.getElementById('reportSection').classList.add('show');
-                    renderReport(userLevel);
-                } else {
-                    document.getElementById('unlockSection').style.display = 'block';
-                    document.getElementById('reportSection').classList.remove('show');
+            async function checkServerPaidStatus() {
+                try {
+                    const userId = localStorage.getItem('userId');
+                    if (!userId) {
+                        debug('没有userId');
+                        return false;
+                    }
+                    debug('userId: ' + userId);
+                    debug('调用 checkOrder API...');
+                    
+                    const response = await fetch('/.netlify/functions/check-order', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            order_no: '',
+                            open_order_id: '',
+                            mbtiType: mbtiType,
+                            userLevel: userLevel,
+                            userId: userId,
+                            onlyUserRecord: true
+                        })
+                    });
+                    const data = await response.json();
+                    debug('API响应: ' + JSON.stringify(data));
+                    
+                    if (data.paid === true || data.status === 'paid') {
+                        document.getElementById('unlockSection').style.display = 'none';
+                        document.getElementById('reportSection').classList.add('show');
+                        renderReport(userLevel);
+                        debug('报告已解锁（通过用户记录）');
+                        debugDiv.style.display = 'none';
+                        return true;
+                    } else {
+                        document.getElementById('unlockSection').style.display = 'block';
+                        document.getElementById('reportSection').classList.remove('show');
+                        debug('未支付');
+                        return false;
+                    }
+                } catch (error) {
+                    debug('错误: ' + error.message);
+                    console.error('Check server paid status error:', error);
+                    return false;
                 }
             }
 
