@@ -82,17 +82,20 @@ exports.handler = async function(event, context) {
     const time = Math.floor(Date.now() / 1000);
     const nonce_str = crypto.randomBytes(16).toString('hex');
 
+    // 虎皮椒支付参数
     const params = {
         version: "1.1",
         appid: APPID,
         trade_order_id: order_no,
-        total_fee: PRICE_YUAN.toString(),  // 服务端硬编码金额（单位：元）
-        title: GOODS_NAME,  // 服务端硬编码商品名
+        total_fee: PRICE_YUAN.toString(),
+        title: GOODS_NAME,
         time: time,
         notify_url: NOTIFY_URL,
         return_url: `${RETURN_URL}?order=${order_no}`,
         nonce_str: nonce_str,
-        type: paymentType  // 指定支付渠道
+        type: paymentType,
+        // 明确指定为native扫码支付
+        scene: 'native'
     };
 
     const hash = generateXhHash(params, APPSECRET);
@@ -133,31 +136,32 @@ exports.handler = async function(event, context) {
         const openOrderId = ret.open_order_id || ret.order_id || '';
 
         // 虎皮椒API返回格式：
-        // url_qrcode: PC端使用的二维码地址（可能是一个支付中间页URL）
-        // url: 手机端专用的H5支付URL
-        // 直接使用 url_qrcode 生成二维码（虎皮椒会处理重定向到支付页面）
-        const pcQrCodeUrl = ret.url_qrcode;
-        const mobileUrl = ret.url;
+        // url_qrcode: PC端使用的二维码地址
+        // url: 手机端H5支付URL
+        const pcQrCodeUrl = ret.url_qrcode || ret.url || '';
+        const mobileUrl = ret.url || ret.url_qrcode || '';
 
-        // 调试日志
-        console.log('Payment API response:', {
-            openOrderId: openOrderId,
-            pcQrCodeUrl: pcQrCodeUrl ? (pcQrCodeUrl.substring(0, 80) + '...') : 'empty',
-            mobileUrl: mobileUrl ? (mobileUrl.substring(0, 80) + '...') : 'empty'
-        });
+        // 调试日志 - 查看虎皮椒返回的完整数据
+        console.log('=== 虎皮椒API返回 ===');
+        console.log('完整响应:', JSON.stringify(ret, null, 2));
+        console.log('openOrderId:', openOrderId);
+        console.log('pcQrCodeUrl:', pcQrCodeUrl);
+        console.log('mobileUrl:', mobileUrl);
+        console.log('====================');
 
         if (pcQrCodeUrl || mobileUrl) {
             return { statusCode: 200, headers, body: JSON.stringify({ 
                 code: 0, 
-                url_qrcode: pcQrCodeUrl || '',  // PC端二维码地址
-                url: mobileUrl || '',             // 手机端专用URL
-                pay_url: pcQrCodeUrl || mobileUrl, // 优先使用PC端URL（更通用）
+                url_qrcode: pcQrCodeUrl,
+                url: mobileUrl,
+                pay_url: pcQrCodeUrl || mobileUrl,
                 order_no: order_no,
                 open_order_id: openOrderId,
                 price: PRICE_YUAN,
                 expires_at: new Date(Date.now() + 30 * 60 * 1000).toISOString()
             }) };
         } else {
+            console.error('虎皮椒未返回支付URL！');
             return { statusCode: 200, headers, body: JSON.stringify({ code: -2, msg: 'No payment URL returned' }) };
         }
     } catch (err) {
