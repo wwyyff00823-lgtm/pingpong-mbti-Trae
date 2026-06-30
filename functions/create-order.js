@@ -90,7 +90,7 @@ exports.handler = async function(event, context) {
         title: GOODS_NAME,  // 服务端硬编码商品名
         time: time,
         notify_url: NOTIFY_URL,
-        return_url: RETURN_URL,
+        return_url: `${RETURN_URL}?order=${order_no}`,
         nonce_str: nonce_str,
         type: paymentType  // 指定支付渠道
     };
@@ -132,18 +132,26 @@ exports.handler = async function(event, context) {
 
         const openOrderId = ret.open_order_id || ret.order_id || '';
 
-        // 根据虎皮椒文档区分：
-        // url_qrcode: PC端使用的二维码地址
-        // url: 手机端专用的请求URL（系统会自动判断并返回二维码）
+        // 虎皮椒API返回格式：
+        // url_qrcode: PC端使用的二维码地址（可能是一个支付中间页URL）
+        // url: 手机端专用的H5支付URL
+        // 直接使用 url_qrcode 生成二维码（虎皮椒会处理重定向到支付页面）
         const pcQrCodeUrl = ret.url_qrcode;
         const mobileUrl = ret.url;
+
+        // 调试日志
+        console.log('Payment API response:', {
+            openOrderId: openOrderId,
+            pcQrCodeUrl: pcQrCodeUrl ? (pcQrCodeUrl.substring(0, 80) + '...') : 'empty',
+            mobileUrl: mobileUrl ? (mobileUrl.substring(0, 80) + '...') : 'empty'
+        });
 
         if (pcQrCodeUrl || mobileUrl) {
             return { statusCode: 200, headers, body: JSON.stringify({ 
                 code: 0, 
                 url_qrcode: pcQrCodeUrl || '',  // PC端二维码地址
                 url: mobileUrl || '',             // 手机端专用URL
-                pay_url: mobileUrl || pcQrCodeUrl, // 默认使用手机端URL
+                pay_url: pcQrCodeUrl || mobileUrl, // 优先使用PC端URL（更通用）
                 order_no: order_no,
                 open_order_id: openOrderId,
                 price: PRICE_YUAN,
