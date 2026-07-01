@@ -608,6 +608,7 @@
             </div>
             
             <div>
+                <div style="text-align:center;color:#999;font-size:12px;margin-bottom:8px;">💡 报告请及时截图保存，退出后将失效</div>
                 <div class="report-title">性格维度雷达图</div>
                 <div class="radar-section">
                     <div class="radar-container">
@@ -640,6 +641,7 @@
 
         
         <button class="btn secondary" id="restartBtn">重新测试</button>
+        <button class="btn secondary" id="shareBtn">分享报告</button>
 
         <div class="footer">
             <p>©️2026 业余乒乓球人的MBTI风格测试版权所有</p>
@@ -703,9 +705,19 @@
 
     <script src="data.js"></script>
     <script>
-        const mbtiType = localStorage.getItem('mbtiType');
-        const integrityScore = localStorage.getItem('integrityScore') === 'true';
-        const userLevel = localStorage.getItem('userLevel') || 'mid';
+        const urlParams = new URLSearchParams(window.location.search);
+        const typeFromUrl = urlParams.get('type');
+        const levelFromUrl = urlParams.get('level');
+        
+        let mbtiType = localStorage.getItem('mbtiType');
+        let userLevel = localStorage.getItem('userLevel') || 'mid';
+        
+        if (typeFromUrl) {
+            mbtiType = typeFromUrl;
+        }
+        if (levelFromUrl) {
+            userLevel = levelFromUrl;
+        }
         
         const MAX_POLL_COUNT = 60;
         const POLL_INTERVAL = 5000;
@@ -1074,8 +1086,13 @@
             // 直接从URL获取order参数
             const urlParams = new URLSearchParams(window.location.search);
             const orderFromUrl = urlParams.get('order');
+            const uidFromUrl = urlParams.get('uid');
+            const typeFromUrl = urlParams.get('type');
             
-            // 如果URL有order参数，说明是从虎皮椒跳转回来的，直接解锁报告！
+            if (uidFromUrl) {
+                localStorage.setItem('userId', uidFromUrl);
+            }
+            
             if (orderFromUrl) {
                 document.getElementById('unlockSection').style.display = 'none';
                 document.getElementById('reportSection').classList.add('show');
@@ -1083,17 +1100,32 @@
                 showToast('支付成功！报告已解锁');
                 localStorage.removeItem('pendingOrderNo');
                 localStorage.removeItem('pendingOpenOrderId');
-                window.history.replaceState({}, '', window.location.pathname);
+                
+                const userId = localStorage.getItem('userId');
+                if (userId) {
+                    window.history.replaceState({}, '', window.location.pathname + `?uid=${encodeURIComponent(userId)}`);
+                }
             } else if (localStorage.getItem('paidAlready') === 'true') {
-                // 重新测试后结果相同，已支付过，直接解锁
                 localStorage.removeItem('paidAlready');
                 document.getElementById('unlockSection').style.display = 'none';
                 document.getElementById('reportSection').classList.add('show');
                 renderReport(userLevel);
                 showToast('检测到您已购买过相同结果，报告已解锁');
+                
+                const userId = localStorage.getItem('userId');
+                if (userId) {
+                    window.history.replaceState({}, '', window.location.pathname + `?uid=${encodeURIComponent(userId)}`);
+                }
             } else {
-                // 没有order参数，正常检查是否已支付
-                await checkServerPaidStatus();
+                const userId = localStorage.getItem('userId');
+                const isShareLink = typeFromUrl && !uidFromUrl && !userId;
+                
+                if (isShareLink) {
+                    document.getElementById('unlockSection').style.display = 'block';
+                    document.getElementById('reportSection').classList.remove('show');
+                } else {
+                    await checkServerPaidStatus();
+                }
             }
 
             async function checkServerPaidStatus() {
@@ -1289,18 +1321,23 @@
                 qrSection.style.display = 'block';
                 saveQrBtn.style.display = 'block';
                 
-                const pcUrl = order.qrCodeUrl;
+                let pcUrl = order.qrCodeUrl;
                 
-                qrCode.innerHTML = '';
-                if (typeof QRCode !== 'undefined' && pcUrl) {
-                    new QRCode(qrCode, {
-                        text: pcUrl,
-                        width: 240,
-                        height: 240,
-                        colorDark: '#000000',
-                        colorLight: '#ffffff',
-                        correctLevel: QRCode.CorrectLevel.H
-                    });
+                if (pcUrl && pcUrl.startsWith('http') && (pcUrl.endsWith('.png') || pcUrl.endsWith('.jpg') || pcUrl.endsWith('.jpeg'))) {
+                    qrCode.innerHTML = `<img src="${pcUrl}" alt="支付二维码" style="width:240px;height:240px;border-radius:8px;"/>`;
+                } else {
+                    pcUrl = order.qrCodeUrl || order.mobileUrl;
+                    qrCode.innerHTML = '';
+                    if (typeof QRCode !== 'undefined' && pcUrl) {
+                        new QRCode(qrCode, {
+                            text: pcUrl,
+                            width: 240,
+                            height: 240,
+                            colorDark: '#000000',
+                            colorLight: '#ffffff',
+                            correctLevel: QRCode.CorrectLevel.H
+                        });
+                    }
                 }
                 
                 qrHint.textContent = '请使用手机微信扫码支付';
@@ -1475,6 +1512,24 @@
                 localStorage.removeItem('dimensionScores');
                 localStorage.setItem('retest', 'true');
                 window.location.href = 'index.html';
+            });
+
+            const shareBtn = document.getElementById('shareBtn');
+            shareBtn.addEventListener('click', async () => {
+                const shareUrl = window.location.origin + '/result.html?type=' + encodeURIComponent(mbtiType) + '&level=' + encodeURIComponent(userLevel);
+                
+                try {
+                    await navigator.clipboard.writeText(shareUrl);
+                    showToast('分享链接已复制到剪贴板');
+                } catch (err) {
+                    const textarea = document.createElement('textarea');
+                    textarea.value = shareUrl;
+                    document.body.appendChild(textarea);
+                    textarea.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(textarea);
+                    showToast('分享链接已复制到剪贴板');
+                }
             });
         });
     </script>

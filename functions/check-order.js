@@ -22,7 +22,7 @@ function generateXhHash(params, hashkey) {
 }
 
 const ALLOWED_ORIGINS = [
-    'https://harmonious-cactus-ff7aac.netlify.app',
+    'https://superlative-lokum-e2f9b1.netlify.app',
     'http://localhost:8888',
     'http://localhost:9999'
 ];
@@ -67,11 +67,71 @@ exports.handler = async function(event, context) {
         return { statusCode: 400, headers, body: JSON.stringify({ code: -1, msg: "Missing order_no" }) };
     }
 
-    // 1. onlyUserRecord模式：只查用户记录
+    // 1. onlyUserRecord模式：查询用户记录
     if (onlyUserRecord) {
-        if (!userId || !mbtiType || !userLevel) {
-            return { statusCode: 400, headers, body: JSON.stringify({ code: -1, msg: "Missing userId/mbtiType/userLevel" }) };
+        if (!userId) {
+            return { statusCode: 400, headers, body: JSON.stringify({ code: -1, msg: "Missing userId" }) };
         }
+        
+        // checkAllRecords模式：查询用户所有已支付记录
+        if (checkAllRecords) {
+            try {
+                const store = await import('@netlify/blobs').then(m => m.getStore('payments'));
+                const allKeys = await store.list({ prefix: `paid_${userId}_` });
+                
+                for (const key of allKeys.blobs) {
+                    const data = await store.get(key.key);
+                    if (data) {
+                        const payment = JSON.parse(data);
+                        if (payment.paid === true) {
+                            console.log('找到用户已支付记录:', key.key);
+                            return { 
+                                statusCode: 200, 
+                                headers, 
+                                body: JSON.stringify({ 
+                                    code: 0, 
+                                    paid: true, 
+                                    status: 'paid',
+                                    mbtiType: payment.mbti_type || '',
+                                    userLevel: payment.user_level || '',
+                                    msg: "Payment found" 
+                                }) 
+                            };
+                        }
+                    }
+                }
+                
+                console.log('未找到用户已支付记录');
+                return { 
+                    statusCode: 200, 
+                    headers, 
+                    body: JSON.stringify({ 
+                        code: 0, 
+                        paid: false, 
+                        status: 'unpaid',
+                        msg: "No user payment record" 
+                    }) 
+                };
+            } catch (e) {
+                console.log('Blobs错误:', e.message);
+                return { 
+                    statusCode: 200, 
+                    headers, 
+                    body: JSON.stringify({ 
+                        code: 0, 
+                        paid: false, 
+                        status: 'unknown',
+                        msg: "Blobs error" 
+                    }) 
+                };
+            }
+        }
+        
+        // 普通onlyUserRecord模式：查询指定mbtiType+userLevel的记录
+        if (!mbtiType || !userLevel) {
+            return { statusCode: 400, headers, body: JSON.stringify({ code: -1, msg: "Missing mbtiType/userLevel" }) };
+        }
+        
         try {
             const store = await import('@netlify/blobs').then(m => m.getStore('payments'));
             const userPaymentKey = `paid_${userId}_${mbtiType}_${userLevel}`;

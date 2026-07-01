@@ -1,7 +1,7 @@
 const crypto = require('crypto');
 
 const ALLOWED_ORIGINS = [
-    'https://harmonious-cactus-ff7aac.netlify.app',
+    'https://superlative-lokum-e2f9b1.netlify.app',
     'http://localhost:8888',
     'http://localhost:9999'
 ];

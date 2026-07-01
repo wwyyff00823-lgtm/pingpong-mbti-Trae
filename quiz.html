@@ -685,6 +685,51 @@
             return arr;
         }
 
+        function generateUserId() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const uidFromUrl = urlParams.get('uid');
+            if (uidFromUrl) {
+                localStorage.setItem('userId', uidFromUrl);
+                return uidFromUrl;
+            }
+            
+            const existingId = localStorage.getItem('userId');
+            if (existingId) return existingId;
+            
+            const timestamp = Date.now();
+            const randomStr = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+            const userId = `${timestamp}_${randomStr}`;
+            localStorage.setItem('userId', userId);
+            return userId;
+        }
+
+        async function checkPaidStatus() {
+            try {
+                const userId = generateUserId();
+                const response = await fetch('/.netlify/functions/check-order', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        userId: userId,
+                        onlyUserRecord: true,
+                        checkAllRecords: true
+                    })
+                });
+                const data = await response.json();
+                if (data.paid === true && data.mbtiType && data.userLevel) {
+                    localStorage.setItem('mbtiType', data.mbtiType);
+                    localStorage.setItem('userLevel', data.userLevel);
+                    localStorage.setItem('integrityScore', '1');
+                    window.location.href = 'result.html';
+                    return true;
+                }
+                return false;
+            } catch (error) {
+                console.error('Check paid status error:', error);
+                return false;
+            }
+        }
+
         function initQuiz() {
             shuffledQuestions = questions.map(q => ({
                 ...q,
@@ -695,12 +740,19 @@
             const savedAnswers = localStorage.getItem('answers');
             if (savedAnswers) {
                 answers = JSON.parse(savedAnswers);
-                // 重新计算分数
                 recalculateScores();
             }
             
             renderQuestion();
         }
+        
+        document.addEventListener('DOMContentLoaded', async () => {
+            generateUserId();
+            const isPaid = await checkPaidStatus();
+            if (!isPaid) {
+                initQuiz();
+            }
+        });
         
         function recalculateScores() {
             dimensionScores = { E: 0, I: 0, S: 0, N: 0, T: 0, F: 0, J: 0, P: 0 };
@@ -921,6 +973,36 @@
             return mbti;
         }
 
+        function generateUserLevel(integrityScore) {
+            const score = parseInt(integrityScore) || 0;
+            if (score >= 2) return 'high';
+            if (score >= 1) return 'mid';
+            return 'low';
+        }
+
+        async function checkPaidStatusForNewResult(newMbtiType, newUserLevel) {
+            try {
+                const userId = localStorage.getItem('userId');
+                if (!userId) return false;
+                
+                const response = await fetch('/.netlify/functions/check-order', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        userId: userId,
+                        mbtiType: newMbtiType,
+                        userLevel: newUserLevel,
+                        onlyUserRecord: true
+                    })
+                });
+                const data = await response.json();
+                return data.paid === true;
+            } catch (error) {
+                console.error('Check paid status error:', error);
+                return false;
+            }
+        }
+
         function goToNext() {
             if (!answers[shuffledQuestions[currentIndex].id]) {
                 document.getElementById('toast').classList.add('show');
@@ -931,12 +1013,27 @@
             if (currentIndex === shuffledQuestions.length - 1) {
                 const integrityScore = checkIntegrity();
                 const mbtiType = calculateMBTI();
+                const userLevel = generateUserLevel(integrityScore);
                 
                 localStorage.setItem('integrityScore', integrityScore.toString());
                 localStorage.setItem('mbtiType', mbtiType);
+                localStorage.setItem('userLevel', userLevel);
                 localStorage.setItem('dimensionScores', JSON.stringify(dimensionScores));
                 
-                window.location.href = 'result.html';
+                const retest = localStorage.getItem('retest');
+                if (retest === 'true') {
+                    localStorage.removeItem('retest');
+                    checkPaidStatusForNewResult(mbtiType, userLevel).then(isPaid => {
+                        if (isPaid) {
+                            localStorage.setItem('paidAlready', 'true');
+                        }
+                        window.location.href = 'result.html';
+                    }).catch(() => {
+                        window.location.href = 'result.html';
+                    });
+                } else {
+                    window.location.href = 'result.html';
+                }
             } else {
                 currentIndex++;
                 renderQuestion();
