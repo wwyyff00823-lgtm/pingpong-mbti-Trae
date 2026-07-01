@@ -55,7 +55,7 @@ exports.handler = async function(event, context) {
         formData.forEach((value, key) => { body[key] = value; });
     }
 
-    const { order_no, open_order_id, mbtiType, userLevel, userId, onlyUserRecord } = body;
+    const { order_no, open_order_id, mbtiType, userLevel, userId, onlyUserRecord, checkAllRecords } = body;
     
     console.log('=== 检查订单 ===');
     console.log('order_no:', order_no);

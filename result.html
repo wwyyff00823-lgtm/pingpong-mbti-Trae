@@ -280,6 +280,7 @@
             border-radius: 16px;
             padding: 20px;
             margin-bottom: 24px;
+            overflow: hidden;
         }
         .radar-container {
             position: relative;
@@ -641,6 +642,7 @@
 
         
         <button class="btn secondary" id="restartBtn">重新测试</button>
+        <button class="btn secondary" id="shareBtn">复制链接</button>
 
         <div class="footer">
             <p>©️2026 业余乒乓球人的MBTI风格测试版权所有</p>
@@ -1118,13 +1120,12 @@
                 }
             } else {
                 const userId = localStorage.getItem('userId');
-                const isShareLink = typeFromUrl && !uidFromUrl && !userId;
                 
-                if (isShareLink) {
+                if (userId) {
+                    await checkServerPaidStatus();
+                } else {
                     document.getElementById('unlockSection').style.display = 'block';
                     document.getElementById('reportSection').classList.remove('show');
-                } else {
-                    await checkServerPaidStatus();
                 }
             }
 
@@ -1146,7 +1147,8 @@
                             mbtiType: mbtiType,
                             userLevel: userLevel,
                             userId: userId,
-                            onlyUserRecord: true
+                            onlyUserRecord: true,
+                            checkAllRecords: true
                         })
                     });
                     const data = await response.json();
@@ -1321,23 +1323,18 @@
                 qrSection.style.display = 'block';
                 saveQrBtn.style.display = 'block';
                 
-                let pcUrl = order.qrCodeUrl;
+                const pcUrl = order.mobileUrl || order.qrCodeUrl;
                 
-                if (pcUrl && pcUrl.startsWith('http') && (pcUrl.endsWith('.png') || pcUrl.endsWith('.jpg') || pcUrl.endsWith('.jpeg'))) {
-                    qrCode.innerHTML = `<img src="${pcUrl}" alt="支付二维码" style="width:240px;height:240px;border-radius:8px;"/>`;
-                } else {
-                    pcUrl = order.qrCodeUrl || order.mobileUrl;
-                    qrCode.innerHTML = '';
-                    if (typeof QRCode !== 'undefined' && pcUrl) {
-                        new QRCode(qrCode, {
-                            text: pcUrl,
-                            width: 240,
-                            height: 240,
-                            colorDark: '#000000',
-                            colorLight: '#ffffff',
-                            correctLevel: QRCode.CorrectLevel.H
-                        });
-                    }
+                qrCode.innerHTML = '';
+                if (typeof QRCode !== 'undefined' && pcUrl) {
+                    new QRCode(qrCode, {
+                        text: pcUrl,
+                        width: 240,
+                        height: 240,
+                        colorDark: '#000000',
+                        colorLight: '#ffffff',
+                        correctLevel: QRCode.CorrectLevel.H
+                    });
                 }
                 
                 qrHint.textContent = '请使用手机微信扫码支付';
@@ -1512,6 +1509,25 @@
                 localStorage.removeItem('dimensionScores');
                 localStorage.setItem('retest', 'true');
                 window.location.href = 'index.html';
+            });
+
+            const shareBtn = document.getElementById('shareBtn');
+            shareBtn.addEventListener('click', async () => {
+                const userId = localStorage.getItem('userId');
+                const shareUrl = window.location.origin + '/result.html' + (userId ? `?uid=${encodeURIComponent(userId)}` : '');
+                
+                try {
+                    await navigator.clipboard.writeText(shareUrl);
+                    showToast('链接已复制到剪贴板');
+                } catch (err) {
+                    const textarea = document.createElement('textarea');
+                    textarea.value = shareUrl;
+                    document.body.appendChild(textarea);
+                    textarea.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(textarea);
+                    showToast('链接已复制到剪贴板');
+                }
             });
         });
     </script>
