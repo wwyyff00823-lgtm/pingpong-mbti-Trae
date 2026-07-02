@@ -278,14 +278,15 @@
         .radar-section {
             background: linear-gradient(135deg, #f8f9fa 0%, #f1f3f4 100%);
             border-radius: 16px;
-            padding: 20px;
+            padding: 15px;
             margin-bottom: 24px;
             overflow: hidden;
+            position: relative;
         }
         .radar-container {
             position: relative;
             width: 100%;
-            max-width: 320px;
+            max-width: 300px;
             margin: 0 auto;
             padding-top: 100%;
         }
@@ -642,7 +643,6 @@
 
         
         <button class="btn secondary" id="restartBtn">重新测试</button>
-        <button class="btn secondary" id="shareBtn">复制链接</button>
 
         <div class="footer">
             <p>©️2026 业余乒乓球人的MBTI风格测试版权所有</p>
@@ -830,7 +830,8 @@
             const ctx = canvas.getContext('2d');
             const container = canvas.parentElement;
             
-            const size = 280;
+            const containerWidth = Math.min(container.clientWidth, 300);
+            const size = containerWidth - 20;
             canvas.width = size;
             canvas.height = size;
             canvas.style.width = size + 'px';
@@ -1118,6 +1119,8 @@
                 if (userId) {
                     window.history.replaceState({}, '', window.location.pathname + `?uid=${encodeURIComponent(userId)}`);
                 }
+            } else if (uidFromUrl) {
+                await checkServerPaidStatus();
             } else {
                 const userId = localStorage.getItem('userId');
                 
@@ -1509,25 +1512,6 @@
                 localStorage.removeItem('dimensionScores');
                 localStorage.setItem('retest', 'true');
                 window.location.href = 'index.html';
-            });
-
-            const shareBtn = document.getElementById('shareBtn');
-            shareBtn.addEventListener('click', async () => {
-                const userId = localStorage.getItem('userId');
-                const shareUrl = window.location.origin + '/result.html' + (userId ? `?uid=${encodeURIComponent(userId)}` : '');
-                
-                try {
-                    await navigator.clipboard.writeText(shareUrl);
-                    showToast('链接已复制到剪贴板');
-                } catch (err) {
-                    const textarea = document.createElement('textarea');
-                    textarea.value = shareUrl;
-                    document.body.appendChild(textarea);
-                    textarea.select();
-                    document.execCommand('copy');
-                    document.body.removeChild(textarea);
-                    showToast('链接已复制到剪贴板');
-                }
             });
         });
     </script>
